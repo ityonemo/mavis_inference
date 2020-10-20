@@ -20,6 +20,67 @@ defmodule Type.Inference do
     regs:  [[reg_state]]
   }
 
+  import Type
+
+  ## API implementation
+  @info_parts [:module, :name, :arity, :env]
+  def infer(fun) do
+    [module, name, arity, _env] = fun
+    |> :erlang.fun_info
+    |> Keyword.take(@info_parts)
+    |> Keyword.values()
+
+    case :code.get_object_code(module) do
+      {^module, binary, _filepath} ->
+        {:beam_file, ^module, _funs_list, _vsn, _meta, functions} = :beam_disasm.file(binary)
+        code = Enum.find_value(functions,
+          fn
+            {:function, ^name, ^arity, _, code} -> code
+            _ -> false
+          end)
+
+        code || raise "fatal error; can't find function `#{name}/#{arity}` in module #{inspect module}"
+
+        Type.Inference.run(code, starting_map(arity))
+      :error ->
+        {:ok, %Type.Function{params: any_for(arity), return: builtin(:any), inferred: false}}
+    end
+  end
+
+  defp any_for(arity) do
+    fn -> builtin(:any) end
+    |> Stream.repeatedly
+    |> Enum.take(arity)
+  end
+
+  defp starting_map(0), do: %{}
+  defp starting_map(arity) do
+    0..(arity - 1)
+    |> Enum.map(&{&1, builtin(:any)})
+    |> Enum.into(%{})
+  end
+
+  def asm(fun) do
+    [module, name, arity, _env] = fun
+    |> :erlang.fun_info
+    |> Keyword.take(@info_parts)
+    |> Keyword.values()
+
+    case :code.get_object_code(module) do
+      {^module, binary, _filepath} ->
+        {:beam_file, ^module, _funs_list, _vsn, _meta, functions} = :beam_disasm.file(binary)
+        code = Enum.find_value(functions,
+          fn
+            {:function, ^name, ^arity, _, code} -> code
+            _ -> false
+          end)
+
+        code || raise "fatal error; can't find function `#{name}/#{arity}` in module #{inspect module}"
+      :error ->
+        raise "nope"
+    end
+  end
+
   def run(code, starting_map, module \\ __MODULE__.Opcodes) do
     [end_states | rest] = %__MODULE__{code: code, regs: [[starting_map]]}
     |> do_analyze(module)

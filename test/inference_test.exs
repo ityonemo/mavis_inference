@@ -1,6 +1,12 @@
 defmodule TypeTest.InferenceTest do
+
+  use ExUnit.Case, async: true
+
+  import Type
+
+  alias TypeTest.FunctionProperties
+
   describe "type.of/1 assigns lambdas" do
-    @describetag :of
     test "for a fun that isn't precompiled" do
       assert %Type.Function{params: [builtin(:any)], return: builtin(:any), inferred: false} == Type.of(&(&1))
     end
@@ -11,7 +17,7 @@ defmodule TypeTest.InferenceTest do
     end
 
     test "a lambda with a move" do
-      assert Type.Function.has_opcode?({TypeTest.LambdaExamples, :with_move, 2}, [:move])
+      assert FunctionProperties.has_opcode?({TypeTest.LambdaExamples, :with_move, 2}, [:move])
       assert %Type.Function{params: [builtin(:any), builtin(:any)], return: builtin(:any)} == Type.of(&TypeTest.LambdaExamples.with_move/2)
     end
 
@@ -21,13 +27,13 @@ defmodule TypeTest.InferenceTest do
     end
 
     test "a lambda with a backpropagating function" do
-      assert Type.Function.has_opcode?({TypeTest.LambdaExamples, :with_bitsize, 1}, [:gc_bif, :bit_size])
+      assert FunctionProperties.has_opcode?({TypeTest.LambdaExamples, :with_bitsize, 1}, [:gc_bif, :bit_size])
       assert %Type.Function{params: [%Type.Bitstring{size: 0, unit: 1}], return: builtin(:non_neg_integer)} == Type.of(&TypeTest.LambdaExamples.with_bitsize/1)
     end
 
-    #test "a lambda with a real function" do
-    #  assert Type.Function.has_opcode?({TypeTest.LambdaExamples, :with_add, 2}, [:gc_bif, :+])
-    #  assert %Type.Function{params: [builtin(:any), builtin(:any)], return: builtin(:any)} == Type.of(&TypeTest.LambdaExamples.with_add/2)
-    #end
+    test "a lambda with a function with forking code" do
+      assert FunctionProperties.has_opcode?({TypeTest.LambdaExamples, :with_add, 2}, [:gc_bif, :+])
+      assert %Type.Function{params: [builtin(:any), builtin(:any)], return: builtin(:any)} == Type.of(&TypeTest.LambdaExamples.with_add/2)
+    end
   end
 end
