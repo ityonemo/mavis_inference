@@ -24,27 +24,33 @@ defmodule Type.Inference do
 
   ## API implementation
   @info_parts [:module, :name, :arity, :env]
-  def infer(fun) do
-    [module, name, arity, _env] = fun
+  def infer(lambda) when is_function(lambda) do
+    [module, fun, arity, _env] = lambda
     |> :erlang.fun_info
     |> Keyword.take(@info_parts)
     |> Keyword.values()
 
+    infer({module, fun, arity})
+  end
+  def infer({module, fun, arity}) do
     case :code.get_object_code(module) do
       {^module, binary, _filepath} ->
         {:beam_file, ^module, _funs_list, _vsn, _meta, functions} = :beam_disasm.file(binary)
         code = Enum.find_value(functions,
           fn
-            {:function, ^name, ^arity, _, code} -> code
+            {:function, ^fun, ^arity, _, code} -> code
             _ -> false
           end)
 
-        code || raise "fatal error; can't find function `#{name}/#{arity}` in module #{inspect module}"
+        code || raise "fatal error; can't find function `#{fun}/#{arity}` in module #{inspect module}"
 
-        Type.Inference.run(code, starting_map(arity))
+        infer(code)
       :error ->
         {:ok, %Type.Function{params: any_for(arity), return: builtin(:any), inferred: false}}
     end
+  end
+  def infer({:function, _name, arity, _index, code}) do
+    Type.Inference.run(code, starting_map(arity))
   end
 
   defp any_for(arity) do
