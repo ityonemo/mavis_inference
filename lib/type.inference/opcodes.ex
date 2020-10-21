@@ -4,7 +4,6 @@ defmodule Type.Inference.Opcodes do
 
   use Type.Inference.Macros
 
-
   opcode {:move, {:x, from}, {:x, to}} do
     forward(registers) do
       Map.put(registers, to, registers[from])
@@ -41,6 +40,10 @@ defmodule Type.Inference.Opcodes do
       {:ok, Map.put(registers, from, %Type.Bitstring{size: 0, unit: 1})}
     end
   end
+
+  #opcode {:gc_bif, :+, {:f, to}, 2, [x: left, x: right], _} do
+  #
+  #end
 
   opcode {:line, line} do
     forward(registers) do

@@ -36,9 +36,9 @@ defmodule Type.Inference do
     case :code.get_object_code(module) do
       {^module, binary, _filepath} ->
         {:beam_file, ^module, _funs_list, _vsn, _meta, functions} = :beam_disasm.file(binary)
-        code = Enum.find_value(functions,
+        code = Enum.find(functions,
           fn
-            {:function, ^fun, ^arity, _, code} -> code
+            {:function, ^fun, ^arity, _, _code} -> true
             _ -> false
           end)
 
@@ -66,27 +66,6 @@ defmodule Type.Inference do
     |> Enum.into(%{})
   end
 
-  def asm(fun) do
-    [module, name, arity, _env] = fun
-    |> :erlang.fun_info
-    |> Keyword.take(@info_parts)
-    |> Keyword.values()
-
-    case :code.get_object_code(module) do
-      {^module, binary, _filepath} ->
-        {:beam_file, ^module, _funs_list, _vsn, _meta, functions} = :beam_disasm.file(binary)
-        code = Enum.find_value(functions,
-          fn
-            {:function, ^name, ^arity, _, code} -> code
-            _ -> false
-          end)
-
-        code || raise "fatal error; can't find function `#{name}/#{arity}` in module #{inspect module}"
-      :error ->
-        raise "nope"
-    end
-  end
-
   def run(code, starting_map, module \\ __MODULE__.Opcodes) do
     [end_states | rest] = %__MODULE__{code: code, regs: [[starting_map]]}
     |> do_analyze(module)
@@ -110,6 +89,9 @@ defmodule Type.Inference do
     |> Enum.into(%Type.Union{})
 
     {:ok, type}
+  rescue
+    e in Type.UnknownOpcodeError ->
+      reraise %{e | code_block: code}, __STACKTRACE__
   end
 
   def do_analyze(state = %{code: []}, _), do: state

@@ -69,7 +69,12 @@ defmodule Type.Inference.Macros do
     caller = env.module
     fwd = Module.get_attribute(caller, :forwards)
     bck = Module.get_attribute(caller, :backprops)
-    {:__block__, [], Enum.reverse(bck ++ fwd)}
+    last = quote do
+      def forward(op, _) do
+        raise Type.UnknownOpcodeError, opcode: op
+      end
+    end
+    {:__block__, [], Enum.reverse(bck ++ [last | fwd])}
   end
 
   ###############################################################
