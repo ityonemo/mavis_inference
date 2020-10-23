@@ -54,6 +54,10 @@ defmodule Type.Inference.ParallelEngine do
 
     [init.parent | Map.values(init.parsers)]
     |> Enum.map(&send(&1, {:done, label, builtin(:any)}))
+
+  rescue
+    e in Type.UnknownOpcodeError ->
+      reraise %{e | code_block: code}, __STACKTRACE__
   end
 
 end

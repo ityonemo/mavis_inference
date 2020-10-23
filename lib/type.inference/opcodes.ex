@@ -4,42 +4,42 @@ defmodule Type.Inference.Opcodes do
 
   use Type.Inference.Macros
 
-  opcode {:move, {:x, from}, {:x, to}} do
-    forward(registers) do
-      Map.put(registers, to, registers[from])
-    end
+  #opcode {:move, {:x, from}, {:x, to}} do
+  #  forward(registers) do
+  #    Map.put(registers, to, registers[from])
+  #  end
+#
+  #  backprop(registers) do
+  #    {:ok, Map.merge(registers, %{from => registers[to], to => builtin(:any)})}
+  #  end
+  #end
+#
+  #opcode {:move, {_, literal}, {:x, to}} do
+  #  forward(registers) do
+  #    Map.put(registers, to, Type.of(literal))
+  #  end
+#
+  #  backprop(registers) do
+  #    case Type.usable_as(Type.of(literal), registers[to]) do
+  #      :ok ->
+  #        {:ok, Map.merge(registers, %{to => builtin(:any)})}
+  #      {:maybe, _} ->
+  #        raise "not implemented yet"
+  #      {:error, _} ->
+  #        {:error, "foobar"}
+  #    end
+  #  end
+  #end
 
-    backprop(registers) do
-      {:ok, Map.merge(registers, %{from => registers[to], to => builtin(:any)})}
-    end
-  end
-
-  opcode {:move, {_, literal}, {:x, to}} do
-    forward(registers) do
-      Map.put(registers, to, Type.of(literal))
-    end
-
-    backprop(registers) do
-      case Type.usable_as(Type.of(literal), registers[to]) do
-        :ok ->
-          {:ok, Map.merge(registers, %{to => builtin(:any)})}
-        {:maybe, _} ->
-          raise "not implemented yet"
-        {:error, _} ->
-          {:error, "foobar"}
-      end
-    end
-  end
-
-  opcode {:gc_bif, :bit_size, _, 1, [x: from], {:x, to}} do
-    forward(registers) do
-      Map.put(registers, to, builtin(:non_neg_integer))
-    end
-
-    backprop(registers) do
-      {:ok, Map.put(registers, from, %Type.Bitstring{size: 0, unit: 1})}
-    end
-  end
+  #opcode {:gc_bif, :bit_size, _, 1, [x: from], {:x, to}} do
+  #  forward(registers) do
+  #    Map.put(registers, to, builtin(:non_neg_integer))
+  #  end
+#
+  #  backprop(registers) do
+  #    {:ok, Map.put(registers, from, %Type.Bitstring{size: 0, unit: 1})}
+  #  end
+  #end
 
 #  opcode {:gc_bif, :+, {:f, to}, 2, [x: left, x: right], _} do
 #    forward(registers) do
@@ -60,7 +60,6 @@ defmodule Type.Inference.Opcodes do
     end
   end
 
-  opcode {:func_info, _, _, _}
-  opcode {:line, _line}
+#  opcode {:func_info, _, _, _}
 
 end
