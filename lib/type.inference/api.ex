@@ -1,4 +1,4 @@
-defmodule Type.Inference.Api do
+defmodule Type.Engine.Api do
   @type opcode :: atom | tuple
 
   @callback forward(opcode, Type.Inference.reg_state()) :: Type.Inference.reg_state()

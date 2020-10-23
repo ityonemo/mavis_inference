@@ -1,7 +1,7 @@
 defmodule Type.Inference.Macros do
   defmacro __using__(_) do
     quote do
-      @behaviour Type.Inference.Api
+      @behaviour Type.Engine.Api
 
       import Type.Inference.Macros, only: [opcode: 1, opcode: 2]
 
