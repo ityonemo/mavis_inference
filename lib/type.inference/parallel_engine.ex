@@ -16,7 +16,7 @@ defmodule Type.Inference.ParallelEngine do
   }
 
   @spec parse(Module.label_blocks, module, Module.entry_points) ::
-    %{optional(Module.label) => Type.t}
+    %{optional(:beam_lib.label) => Type.t}
   def parse(label_blocks, module, entry_points) do
     # spin up a bunch of parsers in parallel
     parsers = label_blocks
@@ -51,6 +51,7 @@ defmodule Type.Inference.ParallelEngine do
 
     # DO SOMETHING WITH CODE
     Label.parse(code)
+    |> IO.inspect(label: "54")
 
     [init.parent | Map.values(init.parsers)]
     |> Enum.map(&send(&1, {:done, label, builtin(:any)}))
@@ -58,6 +59,14 @@ defmodule Type.Inference.ParallelEngine do
   rescue
     e in Type.UnknownOpcodeError ->
       reraise %{e | code_block: code}, __STACKTRACE__
+  end
+
+  @spec obtain_label(:beam_lib.label) :: Type.t
+
+  def obtain_label(label) do
+    receive do
+      {:done, ^label, type} -> type
+    end
   end
 
 end

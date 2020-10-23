@@ -8,40 +8,44 @@ defmodule Type.Inference.Module do
     entry_points: %{}
   ]
 
-  @type label :: pos_integer()
-
-  @type label_blocks :: %{optional(label) => Type.t}
-  @type entry_points :: %{optional({atom, arity}) => label}
+  @type label_blocks :: %{optional(:beam_lib.label) => Type.t}
+  @type entry_points :: %{optional({atom, arity}) => :beam_lib.label}
 
   @type t :: %__MODULE__{
     label_blocks: label_blocks,
     entry_points: entry_points
   }
 
+  import Record
+  defrecord :beam_file, Record.extract(:beam_file, from_lib: "compiler/src/beam_disasm.hrl")
+
   alias Type.Inference.ParallelEngine
 
-  @spec from_binary(binary) :: t
+  @spec from_binary(binary) :: {:ok, t} | {:error, term}
   def from_binary(binary) do
+    case :beam_disasm.file(binary) do
+      beam_file(module: module, labeled_exports: exports, code: code) ->
+        entry_points = exports
+        |> Enum.map(&export_to_ep_kv/1)
+        |> Enum.into(%{})
 
-    {:beam_file, module, exports, _version, _meta, funs} = :beam_disasm.file(binary)
+        label_blocks = code
+        |> Enum.flat_map(fn fun_block ->
+          fun_block
+          |> strip_block
+          |> opcodes_to_label_blocks(nil, [], [])
+        end)
+        |> Enum.into(%{})
+        |> ParallelEngine.parse(module, entry_points)
 
-    entry_points = exports
-    |> Enum.map(&export_to_ep_kv/1)
-    |> Enum.into(%{})
-
-    label_blocks = funs
-    |> Enum.flat_map(fn fun_block ->
-      fun_block
-      |> strip_block
-      |> opcodes_to_label_blocks(nil, [], [])
-    end)
-    |> Enum.into(%{})
-    |> ParallelEngine.parse(module, entry_points)
-
-    %__MODULE__{
-      entry_points: entry_points,
-      label_blocks: label_blocks
-    }
+        {:ok, %__MODULE__{
+          entry_points: entry_points,
+          label_blocks: label_blocks
+        }}
+      _ ->
+        # TODO: make this not silly.
+        {:error, "unable to disassemble"}
+    end
   end
 
   defp export_to_ep_kv({export, arity, ep}), do: {{export, arity}, ep}
@@ -52,9 +56,9 @@ defmodule Type.Inference.Module do
 
   @spec opcodes_to_label_blocks(
     block :: [opcode],
-    label :: nil | label,
+    label :: nil | :beam_lib.label,
     this_block :: [opcode],
-    all_blocks :: [{label, [opcode]}]) :: [{label, [opcode]}]
+    all_blocks :: [{:beam_lib.label, [opcode]}]) :: [{:beam_lib.label, [opcode]}]
 
   defp opcodes_to_label_blocks([], nil, _, _), do: raise "unreachable"
   defp opcodes_to_label_blocks([], label, this_block, all_blocks) do

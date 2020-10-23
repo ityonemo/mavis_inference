@@ -34,7 +34,10 @@ defmodule Type.Inference.Macros do
       {:__block__, _, headers} ->
         funs = Enum.group_by(headers,
           fn {key, _, _} -> key end,
-          fn {_, _, [reg_ast, [do: code_ast]]} -> {reg_ast, code_ast} end)
+          fn
+            {_, _, [reg_ast, [do: code_ast]]} -> {reg_ast, code_ast}
+            {:backprop, _, [:terminal]} -> {:_, terminal_ast(op_ast)}
+          end)
 
         {freg_asts, fwd_asts} = unzip(funs.forward)
         {breg_asts, bck_asts} = unzip(List.wrap(funs[:backprop]))
@@ -47,6 +50,13 @@ defmodule Type.Inference.Macros do
 
     rebuild_functions(List.wrap(bck_asts), List.wrap(breg_asts), op_ast, :backprop) ++
     rebuild_functions(List.wrap(fwd_asts), List.wrap(freg_asts), op_ast, :forward)
+  end
+
+  defp terminal_ast(op_ast) do
+    message = "opcode #{inspect op_ast} is supposed to be terminal"
+    quote do
+      raise unquote(message)
+    end
   end
 
   defp rebuild_functions(code_asts, reg_asts, op_ast, mode) do
