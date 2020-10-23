@@ -51,14 +51,16 @@ defmodule Type.Inference.Opcodes do
 #    end
 #  end
 
-  opcode {:line, line} do
-    forward(registers) do
-      Map.put(registers, :line, line)
+  opcode :return do
+    forward(reg = %{xreg: %{0 => _type}}) do
+      {:ok, reg}
+    end
+    forward(reg = %{xreg: %{}}) do
+      {:backprop, [%{reg | xreg: Map.put(reg.xreg, 0, builtin(:any))}]}
     end
   end
 
   opcode {:func_info, _, _, _}
-  opcode {:label, _}
-  opcode :return
+  opcode {:line, _line}
 
 end

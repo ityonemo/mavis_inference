@@ -48,7 +48,7 @@ defmodule Type.Inference.Module do
 
   defp strip_block({:function, _name, _arity, _entrypoint, list}), do: list
 
-  @opaque opcode :: tuple
+  @opaque opcode :: tuple | :return
 
   @spec opcodes_to_label_blocks(
     block :: [opcode],

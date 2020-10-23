@@ -5,103 +5,96 @@ defmodule Type.Inference.Macros do
 
       import Type.Inference.Macros, only: [opcode: 1, opcode: 2]
 
-      Module.register_attribute(__MODULE__, :forwards, accumulate: true)
-      Module.register_attribute(__MODULE__, :backprops, accumulate: true)
+      Module.register_attribute(__MODULE__, :forward, accumulate: true)
+      Module.register_attribute(__MODULE__, :backprop, accumulate: true)
 
       @before_compile Type.Inference.Macros
     end
   end
 
-  defmacro opcode(op_ast, do: ast) do
-    {fwd_ast, freg_ast, bck_ast, breg_ast} = case ast do
-      {:__block__, _,
-        [{:forward, _, [freg_ast, [do: fwd_ast]]},
-        {:backprop, _, [breg_ast, [do: bck_ast]]}]} ->
-
-        {fwd_ast, freg_ast, bck_ast, breg_ast}
-      {:forward, _, [reg_ast, [do: fwd_ast]]} ->
-
-        {fwd_ast, reg_ast, {:ok, {:reg, [], Elixir}}, {:reg, [], Elixir}}
-    end
-
-    # to prevent compiler warnings that can happen if only some of
-    free_vars = scan_free_vars(op_ast)
-
-    fwd_suppress = free_vars -- scan_free_vars(fwd_ast)
-    bck_suppress = free_vars -- scan_free_vars(bck_ast)
-
-    fwd_op = suppress(op_ast, fwd_suppress)
-    bck_op = suppress(op_ast, bck_suppress)
-
-    fwd = quote do
-      def forward(unquote(fwd_op), unquote(freg_ast)) do
-        unquote(fwd_ast)
-      end
-    end
-
-    bck = quote do
-      def backprop(unquote(bck_op), unquote(breg_ast)) do
-        unquote(bck_ast)
-      end
-    end
-
-    quote do
-      @forwards unquote(Macro.escape(fwd))
-      @backprops unquote(Macro.escape(bck))
-    end
+  defmacro opcode(a, do: b) do
+    opcode_impl(a, b)
   end
-
   defmacro opcode(op_ast) do
     fwd = quote do
-      def forward(unquote(op_ast), registers), do: registers
+      def forward(unquote(op_ast), registers), do: {:ok, registers}
     end
     bck = quote do
       def backprop(unquote(op_ast), registers), do: {:ok, registers}
     end
 
     quote do
-      @forwards unquote(Macro.escape(fwd))
-      @backprops unquote(Macro.escape(bck))
+      @forward unquote(Macro.escape(fwd))
+      @backprop unquote(Macro.escape(bck))
     end
+  end
+
+  def opcode_impl(op_ast, ast) do
+    {fwd_asts, freg_asts, bck_asts, breg_asts} = case ast do
+      {:__block__, _, headers} ->
+        funs = Enum.group_by(headers,
+          fn {key, _, _} -> key end,
+          fn {_, _, [reg_ast, [do: code_ast]]} -> {reg_ast, code_ast} end)
+
+        {freg_asts, fwd_asts} = unzip(funs.forward)
+        {breg_asts, bck_asts} = unzip(List.wrap(funs[:backprop]))
+
+        {fwd_asts, freg_asts, bck_asts, breg_asts}
+      {:forward, _, [reg_ast, [do: fwd_ast]]} ->
+
+        {fwd_ast, reg_ast, {:ok, {:reg, [], Elixir}}, {:reg, [], Elixir}}
+    end
+
+    rebuild_functions(List.wrap(bck_asts), List.wrap(breg_asts), op_ast, :backprop) ++
+    rebuild_functions(List.wrap(fwd_asts), List.wrap(freg_asts), op_ast, :forward)
+  end
+
+  defp rebuild_functions(code_asts, reg_asts, op_ast, mode) do
+    code_asts
+    |> Enum.zip(reg_asts)
+    |> Enum.map(fn {code_ast, reg_ast} ->
+      rebuild_function(code_ast, reg_ast, op_ast, mode)
+    end)
+  end
+
+  defp rebuild_function(code_ast, reg_ast, op_ast, mode) do
+    # to prevent compiler warnings that can happen if only some of
+    # the variables are used
+    free_vars = scan_free_vars(op_ast)
+
+    suppressed_header = free_vars -- scan_free_vars(code_ast)
+
+    fwd_op = suppress(op_ast, suppressed_header)
+
+    func = quote do
+      def unquote(mode)(unquote(fwd_op), unquote(reg_ast)) do
+        unquote(code_ast)
+      end
+    end
+
+    {:@, [context: Elixir, import: Kernel], [{mode, [context: Elixir], [Macro.escape(func)]}]}
   end
 
   defmacro __before_compile__(env) do
     caller = env.module
-    fwd = Module.get_attribute(caller, :forwards)
-    bck = Module.get_attribute(caller, :backprops)
+    fwd = List.wrap(Module.get_attribute(caller, :forward))
+    bck = List.wrap(Module.get_attribute(caller, :backprop))
+
     last = quote do
       def forward(op, _) do
         raise Type.UnknownOpcodeError, opcode: op
       end
     end
+
     {:__block__, [], Enum.reverse(bck ++ [last | fwd])}
   end
 
-  ###############################################################
-  ## TOOLS!
-
-  def shift(state = %{code: [this | rest], stack: stack}) do
-    %{state | code: rest, stack: [this | stack]}
-  end
-
-  def unshift(state = %{code: code, stack: [this | rest]}) do
-    %{state | code: [this | code], stack: rest}
-  end
-
-  def pop_reg(state = %{regs: [_ | rest]}) do
-    %{state | regs: rest}
-  end
-
-  def pop_reg_replace(state = %{regs: [_, _ | rest]}, replacement) do
-    %{state | regs: [replacement | rest]}
-  end
-
-  def push_reg(state = %{regs: regs}, new_reg) do
-    %{state | regs: [new_reg | regs]}
-  end
-
-  def push_meta(state, key, value) do
-    %{state | meta: Map.put(state.meta, key, value)}
+  def unzip(list_of_tuples) do
+    {ra, rb} = list_of_tuples
+    |> Enum.reduce({[], []}, fn {sa, sb}, {da, db} ->
+      {[sa | da], [sb | db]}
+    end)
+    {Enum.reverse(ra), Enum.reverse(rb)}
   end
 
   ################################################################
