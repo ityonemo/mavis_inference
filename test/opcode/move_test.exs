@@ -5,10 +5,55 @@ defmodule TypeTest.Opcode.MoveTest do
 
   @moduletag :opcodes
 
-  #import Type, only: :macros
-  #alias Type.{Function, Inference}
+  import Type, only: :macros
 
-  test "redo move tests"
+  alias Type.Inference.Block.Parser
+  alias Type.Inference.Vm
+
+  describe "when the opcode is a register movement" do
+
+    @opcode_reg {:move, {:x, 0}, {:x, 1}}
+    test "forwards the value in the `from` register" do
+      state = Parser.new([@opcode_reg],
+        __MODULE__, %{0 => builtin(:integer)})
+
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [
+        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}},
+        %Vm{xreg: %{0 => builtin(:integer)}}
+      ] = history
+    end
+
+    test "backpropagates to require a value in the from 0" do
+      state = Parser.new([@opcode_reg], __MODULE__)
+
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [
+        %Vm{xreg: %{0 => builtin(:any), 1 => builtin(:any)}},
+        %Vm{xreg: %{0 => builtin(:any)}}
+      ] = history
+    end
+
+    test "backpropagates a previously seen value" do
+      propagated = [@opcode_reg]
+      |> Parser.new(__MODULE__)
+      |> Parser.do_forward
+
+      [[last | rest]] = propagated.histories
+
+      new_type = %{last | xreg: %{0 => builtin(:any), 1 => builtin(:integer)}}
+
+      # rewrite the propragated information to contain typed information
+      # in the targeted register.
+      state = %{propagated | histories: [[new_type | rest]]}
+
+      Parser.do_backprop(state)
+    end
+  end
+
+
 
   #describe "move opcode register move" do
   #  test "forward propagation" do

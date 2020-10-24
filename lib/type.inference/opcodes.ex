@@ -6,11 +6,21 @@ defmodule Type.Inference.Opcodes do
 
   opcode {:move, {:x, from}, {:x, to}} do
     forward(state) do
-      {:ok, put_reg(state, to, get_reg(state, from))}
+      if is_map_key(state.xreg, from) do
+        {:ok, put_reg(state, to, get_reg(state, from))}
+      else
+        # we don't, a priori know what the datatype here is.
+        {:backprop, [put_reg(state, from, builtin(:any))]}
+      end
     end
 
-    # this is a lie
-    backprop :terminal
+    backprop(state) do
+      prev_state = state
+      |> put_reg(from, get_reg(state, to))
+      |> tombstone(from)
+
+      {:ok, [prev_state]}
+    end
   end
 
   opcode {:move, nil, {:x, to}} do
@@ -80,15 +90,16 @@ defmodule Type.Inference.Opcodes do
   opcode {:make_fun2, {module, fun, arity}, _, _, _} do
     # best guess:
     # ignore the last three terms.  Drops the mfa into register x0 always.
+    forward(state = %{module: module}) do
+      return = fun
+      |> ParallelParser.obtain_call(arity)
+      |> Type.Inference.Block.to_function
 
-    forward(state) do
-      if state.module == module do
-        return = fun
-        |> ParallelParser.obtain_call(arity)
-        |> Type.Inference.Block.to_function
+      {:ok, put_reg(state, 0, return)}
+    end
 
-        {:ok, put_reg(state, 0, return)}
-      end
+    forward(_) do
+      raise "unimplemented"
     end
   end
 
@@ -140,5 +151,8 @@ defmodule Type.Inference.Opcodes do
   end
   defp merge_reg(state, registers) do
     %{state | xreg: Map.merge(state.xreg, registers)}
+  end
+  defp tombstone(state, register) do
+    %{state | xreg: Map.delete(state.xreg, register)}
   end
 end

@@ -76,29 +76,26 @@ defmodule Type.Inference.Block.Parser do
 
   # TODO: make check invariants on do_forward
 
-  def do_forward(state, module \\ Type.Inference.Opcodes)
-  def do_forward(state = %{code: [instr | _]}, module) do
+  def do_forward(state, opcode_module \\ Type.Inference.Opcodes)
+  def do_forward(state = %{code: [instr | _]}, opcode_module) do
     # apply the forward operation on the shard.
 
     new_histories = Enum.flat_map(state.histories,
       fn history = [latest | earlier] ->
-        case module.forward(instr, latest) do
+        case opcode_module.forward(instr, latest) do
           {:ok, new_vm} -> [[new_vm | history]]
           {:backprop, replacement_vms} ->
-            do_all_backprop(state, replacement_vms, earlier, module)
+            do_all_backprop(state, replacement_vms, earlier, opcode_module)
           :no_return -> []
         end
       end)
 
-    %{state |
-      code: tl(state.code),
-      stack: [hd(state.code) | state.stack],
-      histories: new_histories}
+    advance(state, new_histories)
   end
 
 
   @spec do_all_backprop(t, [Vm.t], history, module) :: [history]
-  defp do_all_backprop(state, replacement_vms, history, module) do
+  defp do_all_backprop(state, replacement_vms, history, opcode_module) do
     Enum.flat_map(replacement_vms, fn vm ->
       # cut off all unprocessed code so we can return here.
       %{state |
@@ -106,29 +103,44 @@ defmodule Type.Inference.Block.Parser do
         stack: state.stack,
         histories: [[vm | history]]
       }
-      |> do_backprop(module)
+      |> do_backprop(opcode_module)
       |> Map.get(:histories)
     end)
   end
 
 
   def do_backprop(state, module \\ Type.Inference.Opcodes)
-  @spec do_backprop(any, any) :: none
-  def do_backprop(state = %{stack: []}, module) do
+  def do_backprop(state = %{stack: []}, opcode_module) do
     # if we've run out of stack, then run the forward propagation
-    do_analyze(state, module)
+    do_analyze(state, opcode_module)
   end
-  def do_backprop(state, module) do
-    raise "no backprop yet"
+  def do_backprop(state = %{stack: [opcode | _]}, opcode_module) do
+    new_histories = state.histories
+    |> Enum.flat_map(fn [latest, _to_replace | earlier] ->
+      case opcode_module.backprop(opcode, latest) do
+        {:ok, new_starting_points} ->
+          Enum.map(new_starting_points, &[&1 | earlier])
+      end
+    end)
+
+    rollback(state, new_histories)
   end
 
   ###############################################################
   ## TOOLS
 
-  def advance(state, shards) do
+  defp advance(state, new_histories) do
     %{state |
       code: tl(state.code),
-      shards: [shards | state.shards],
-      stack: [hd(state.code) | state.stack]}
+      stack: [hd(state.code) | state.stack],
+      histories: new_histories}
+  end
+
+  defp rollback(state, new_histories) do
+    %{state |
+      code: [hd(state.stack) | state.code],
+      stack: tl(state.stack),
+      histories: new_histories
+    }
   end
 end
