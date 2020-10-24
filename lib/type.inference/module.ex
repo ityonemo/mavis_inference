@@ -48,7 +48,7 @@ defmodule Type.Inference.Module do
           entry_points: entry_points,
           block_lookup: block_lookup,
           code: Enum.flat_map(raw_opcodes, &Function.identity/1)
-        }}
+        }} #|> IO.inspect(label: "51")
       _ ->
         # TODO: make this not silly.
         {:error, "unable to disassemble"}
