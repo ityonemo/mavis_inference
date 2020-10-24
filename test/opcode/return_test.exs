@@ -13,9 +13,12 @@ defmodule TypeTest.Opcode.ReturnTest do
 
   describe "when forward propagating the return opcode" do
     test "forwards the value in register 0" do
-      state = %Parser{code: [:return], histories: [[
-        %Vm{xreg: %{0 => builtin(:integer)}}
-      ]]}
+      state = %Parser{
+        code: [:return],
+        module: __MODULE__,
+        histories: [[
+          %Vm{xreg: %{0 => builtin(:integer)}}
+        ]]}
 
       %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -25,7 +28,7 @@ defmodule TypeTest.Opcode.ReturnTest do
       ] = history
     end
     test "backpropagates to require a value in register 0" do
-      state = %Parser{code: [:return]}
+      state = %Parser{code: [:return], module: __MODULE__}
 
       %Parser{histories: [history]} = Parser.do_forward(state)
 

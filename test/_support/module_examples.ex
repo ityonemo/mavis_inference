@@ -12,7 +12,7 @@ defmodule TypeTest.ModuleExamples do
   end
 
   defmodule WithLambda do
-    def lambda(), do: &functionp/1
+    def lambda, do: &functionp/1
     defp functionp(x), do: x
   end
 

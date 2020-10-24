@@ -27,9 +27,12 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "clobbers the value in register 0" do
-      state = %Parser{code: [@opcode_1], histories: [[
-        %Vm{xreg: %{0 => builtin(:integer)}}
-      ]]}
+      state = %Parser{
+        code: [@opcode_1],
+        module: __MODULE__,
+        histories: [[
+          %Vm{xreg: %{0 => builtin(:integer)}}
+        ]]}
 
       %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -54,9 +57,12 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "forwards the value in register 0" do
-      state = %Parser{code: [@opcode_1], histories: [[
-        %Vm{xreg: %{0 => builtin(:integer)}}
-      ]]}
+      state = %Parser{
+        code: [@opcode_1],
+        module: __MODULE__,
+        histories: [[
+          %Vm{xreg: %{0 => builtin(:integer)}}
+        ]]}
 
       %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -67,7 +73,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "backpropagates to require a value in register 0" do
-      state = %Parser{code: [@opcode_1]}
+      state = %Parser{code: [@opcode_1], module: __MODULE__}
 
       %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -92,9 +98,12 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "forwards the value in register 0" do
-      state = %Parser{code: [@opcode_1], histories: [[
-        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}}
-      ]]}
+      state = %Parser{
+        code: [@opcode_1],
+        module: __MODULE__,
+        histories: [[
+          %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}}
+        ]]}
 
       %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -107,7 +116,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "backpropagates to require a value in register 0" do
-      state = %Parser{code: [@opcode_1]}
+      state = %Parser{code: [@opcode_1], module: __MODULE__}
 
       %Parser{histories: [history]} = Parser.do_forward(state)
 

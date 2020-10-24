@@ -7,11 +7,11 @@ defmodule Type.Inference.Block do
     makes: Type.t
   }]
 
-  defdelegate parse(code), to: Type.Inference.Block.Parser
+  defdelegate parse(code, module), to: Type.Inference.Block.Parser
 end
 
 defmodule Type.Inference.Block.Parser do
-  @enforce_keys [:code]
+  @enforce_keys [:code, :module]
 
   alias Type.Inference.{Vm, Module}
 
@@ -32,9 +32,9 @@ defmodule Type.Inference.Block.Parser do
 
   # TODO: fix it so it's not Module.opcode
 
-  @spec parse([Module.opcode]) :: Block.t
-  def parse(code) do
-    %__MODULE__{code: code}
+  @spec parse([Module.opcode], module) :: Block.t
+  def parse(code, module) do
+    %__MODULE__{code: code, module: module}
     |> do_analyze
     |> release
   end

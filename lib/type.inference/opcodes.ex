@@ -78,9 +78,15 @@ defmodule Type.Inference.Opcodes do
   end
 
   opcode {:make_fun2, {module, fun, arity}, _, _, _} do
+    # best guess:
+    # ignore the last three terms.  Drops the mfa into register x0 always.
+
     forward(state) do
-      # for now, just do this dumb thing.
-      # TODO: make sure that we know which register the result is placed in.
+      module |> IO.inspect(label: "85")
+      fun |> IO.inspect(label: "86")
+      arity |> IO.inspect(label: "87")
+
+
       any_fun = %Type.Function{params: [builtin(:any)], return: builtin(:any)}
       {:ok, put_reg(state, 0, any_fun)}
     end

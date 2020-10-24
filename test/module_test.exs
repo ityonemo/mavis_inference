@@ -65,7 +65,12 @@ defmodule TypeTest.ModuleTest do
 
     @empty_map %{}
     test "produces a spec for the block", %{module: module} do
+
+      Module.code(module, :lambda, 0)
+      |> IO.inspect(label: "70")
+
       [block] = Module.lookup(module, :lambda, 0)
+      |> IO.inspect(label: "73")
 
       assert builtin(:any) = block.makes
       assert @empty_map = block.needs
