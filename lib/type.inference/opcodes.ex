@@ -105,8 +105,21 @@ defmodule Type.Inference.Opcodes do
     backprop :terminal
   end
 
-  opcode {:call_only, _, _} do
-    :unimplemented
+  alias Type.Inference.Module.ParallelParser
+
+  opcode {:call_only, _arity1, {_this_module, function, arity}} do
+    forward(state) do
+      # TODO: allow this to take alternate specs
+      [lookup] = ParallelParser.obtain_call(function, arity)
+
+      # make sure that all of the "needs" are taken care of.
+      lookup.needs
+      |> Map.keys
+      |> Enum.all?(&(&1 in Map.keys(state.xreg)))
+      |> if do
+        {:ok, put_reg(state, 0, lookup.makes)}
+      end
+    end
   end
 
   defp put_reg(state, reg, type) do

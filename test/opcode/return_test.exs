@@ -11,7 +11,7 @@ defmodule TypeTest.Opcode.ReturnTest do
 
   @moduletag :opcodes
 
-  describe "the return opcode" do
+  describe "when forward propagating the return opcode" do
     test "forwards the value in register 0" do
       state = %Parser{code: [:return], histories: [[
         %Vm{xreg: %{0 => builtin(:integer)}}
