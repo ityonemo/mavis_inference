@@ -11,7 +11,6 @@ defmodule TypeTest.Opcode.MoveTest do
   alias Type.Inference.Vm
 
   describe "when the opcode is a register movement" do
-
     @opcode_reg {:move, {:x, 0}, {:x, 1}}
     test "forwards the value in the `from` register" do
       state = Parser.new([@opcode_reg],
@@ -53,149 +52,175 @@ defmodule TypeTest.Opcode.MoveTest do
     end
   end
 
+  describe "when the source is a register" do
+    @opcode_reg {:move, {:x, 0}, {:x, 1}}
+    test "forwards the value in the `from` register" do
+      state = Parser.new([@opcode_reg],
+        __MODULE__, %{0 => builtin(:integer)})
 
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
 
-  #describe "move opcode register move" do
-  #  test "forward propagation" do
-  #    assert %{regs: [[%{0 => :foo}] | _]} =
-  #      Inference.do_forward(%Inference{
-  #        code: [{:move, {:x, 1}, {:x, 0}}],
-  #        regs: [[%{1 => :foo}]]
-  #      })
-#
-  #    assert %{regs: [[%{1 => :foo}] | _]} =
-  #      Inference.do_forward(%Inference{
-  #        code: [{:move, {:x, 0}, {:x, 1}}],
-  #        regs: [[%{0 => :foo}]]
-  #      })
-  #  end
-#
-  #  test "backward propagation" do
-  #    assert %{regs: regs} =
-  #      Inference.do_backprop(%Inference{
-  #        code: [],
-  #        stack: [{:move, {:x, 1}, {:x, 0}}],
-  #        regs: [[%{0 => :foo}], [%{1 => builtin(:any)}]]
-  #      })
-#
-  #    assert [%{0 => builtin(:any), 1 => :foo}] = List.last(regs)
-  #  end
-#
-  #  test "integration test" do
-  #    code = [{:move, {:x, 1}, {:x, 0}}]
-#
-  #    assert {:ok, %Function{
-  #      params: [builtin(:any)], return: builtin(:any)
-  #    }} = Inference.run(code, %{1 => builtin(:any)})
-  #  end
-  #end
-#
-  #describe "move opcode literal integer move" do
-  #  test "forward propagation" do
-  #    assert %{regs: [[%{0 => 47}] | _]} =
-  #      Inference.do_forward(%Inference{
-  #        code: [{:move, {:integer, 47}, {:x, 0}}],
-  #        regs: [[%{}]]
-  #      })
-  #  end
-#
-  #  test "backward propagation" do
-  #    assert %{regs: regs} =
-  #      Inference.do_backprop(%Inference{
-  #        code: [],
-  #        stack: [{:move, {:integer, 47}, {:x, 0}}],
-  #        regs: [[%{0 => 47}], [%{0 => :foo}]]
-  #      })
-#
-  #    assert [%{0 => builtin(:any)}] = List.last(regs)
-  #  end
-#
-  #  test "backward propagation mismatch" do
-  #    assert %{regs: regs} =
-  #      Inference.do_backprop(%Inference{
-  #        code: [],
-  #        stack: [{:move, {:integer, 47}, {:x, 0}}],
-  #        regs: [[%{0 => :foo}], [%{0 => :foo}]]
-  #      })
-#
-  #    assert [] = List.first(regs)
-  #  end
-#
-  #  test "integration test" do
-  #    code = [{:move, {:integer, 47}, {:x, 0}}]
-#
-  #    assert {:ok, %Function{
-  #      params: [builtin(:any)], return: 47
-  #    }} = Inference.run(code, %{0 => builtin(:any)})
-  #  end
-  #end
-#
-  #describe "move opcode atom literal move" do
-  #  test "forward propagation" do
-  #    assert %{regs: [[%{0 => :foo}] | _]} =
-  #      Inference.do_forward(%Inference{
-  #        code: [{:move, {:atom, :foo}, {:x, 0}}],
-  #        regs: [[%{}]]
-  #      })
-  #  end
-#
-  #  test "backward propagation" do
-  #    assert %{regs: regs} =
-  #      Inference.do_backprop(%Inference{
-  #        code: [],
-  #        stack: [{:move, {:integer, 47}, {:x, 0}}],
-  #        regs: [[%{0 => 47}], [%{0 => :xxx}]]
-  #      })
-#
-  #    assert [%{0 => builtin(:any)}] = List.last(regs)
-  #  end
-#
-  #  test "backward propagation mismatch" do
-  #    assert %{regs: regs} =
-  #      Inference.do_backprop(%Inference{
-  #        code: [],
-  #        stack: [{:move, {:literal, "foo"}, {:x, 0}}],
-  #        regs: [[%{0 => builtin(:integer)}], [%{0 => :foo}]]
-  #      })
-#
-  #    assert [] = List.first(regs)
-  #  end
-#
-  #  test "integration test" do
-  #    code = [{:move, {:atom, :foo}, {:x, 0}}]
-#
-  #    assert {:ok, %Function{
-  #      params: [builtin(:any)], return: :foo
-  #    }} = Inference.run(code, %{0 => builtin(:any)})
-  #  end
-  #end
-#
-  #describe "move opcode string literal move" do
-  #  test "forward propagation" do
-  #    assert %{regs: [[%{0 => remote(String.t)}] | _]} =
-  #      Inference.do_forward(%Inference{
-  #        code: [{:move, {:literal, "foo"}, {:x, 0}}],
-  #        regs: [[%{}]]
-  #      })
-  #  end
-#
-  #  test "backward propagation" do
-  #    assert %{regs: regs} =
-  #      Inference.do_backprop(%Inference{
-  #        code: [],
-  #        stack: [{:move, {:literal, "foo"}, {:x, 0}}],
-  #        regs: [[%{0 => remote(String.t)}], [%{0 => :foo}]]
-  #      })
-#
-  #    assert [%{0 => builtin(:any)}] = List.last(regs)
-  #  end
-#
-  #  test "integration test" do
-  #    code = [{:move, {:literal, "foo"}, {:x, 0}}]
-#
-  #    assert {:ok, %Function{
-  #      params: [builtin(:any)], return: remote(String.t)
-  #    }} = Inference.run(code, %{0 => builtin(:any)})
-  #  end
-  #end
+      assert [
+        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}},
+        %Vm{xreg: %{0 => builtin(:integer)}}
+      ] = history
+    end
+
+    test "backpropagates to require a value in the from 0" do
+      state = Parser.new([@opcode_reg], __MODULE__)
+
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [
+        %Vm{xreg: %{0 => builtin(:any), 1 => builtin(:any)}},
+        %Vm{xreg: %{0 => builtin(:any)}}
+      ] = history
+    end
+
+    test "backpropagates a previously seen value" do
+      propagated = [@opcode_reg]
+      |> Parser.new(__MODULE__)
+      |> Parser.do_forward
+
+      [[last | rest]] = propagated.histories
+
+      new_type = %{last | xreg: %{0 => builtin(:any), 1 => builtin(:integer)}}
+
+      # rewrite the propragated information to contain typed information
+      # in the targeted register.
+      end_state = %{propagated | histories: [[new_type | rest]]}
+
+      # check to make sure we don't know that it's supposed to be integer yet.
+      assert [%Vm{xreg: %{0 => builtin(:any)}}] = rest
+
+      # check to see do_backprop this rewrites history.
+      assert %{histories: [[%Vm{xreg: %{0 => builtin(:integer)}}]]} =
+        Parser.do_backprop(end_state)
+    end
+  end
+
+  describe "when the source is a literal integer" do
+    @opcode_int {:move, {:integer, 47}, {:x, 1}}
+    test "forwards the source value" do
+      state = Parser.new([@opcode_int], __MODULE__)
+
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [%Vm{xreg: %{1 => 47}}, %Vm{xreg: %{}}] = history
+    end
+
+    test "backpropagation is ok, if the values match" do
+      propagated = [@opcode_int]
+      |> Parser.new(__MODULE__)
+      |> Parser.do_forward
+
+      [[last | rest]] = propagated.histories
+
+      new_type = %{last | xreg: %{1 => builtin(:integer)}}
+
+      # rewrite the propragated information to contain typed information
+      # in the targeted register.
+      state = %{propagated | histories: [[new_type | rest]]}
+
+      Parser.do_backprop(state)
+    end
+
+    test "backpropagation errors if there is a conflict"
+  end
+
+  describe "when the source is a literal atom" do
+
+    @opcode_atom {:move, {:atom, :foo}, {:x, 1}}
+
+    test "forwards the source value" do
+      state = Parser.new([@opcode_atom], __MODULE__)
+
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [%Vm{xreg: %{1 => :foo}}, %Vm{xreg: %{}}] = history
+    end
+
+    test "backpropagation is ok, if the values match" do
+      propagated = [@opcode_atom]
+      |> Parser.new(__MODULE__)
+      |> Parser.do_forward
+
+      [[last | rest]] = propagated.histories
+
+      new_type = %{last | xreg: %{1 => builtin(:atom)}}
+
+      # rewrite the propragated information to contain typed information
+      # in the targeted register.
+      state = %{propagated | histories: [[new_type | rest]]}
+
+      Parser.do_backprop(state)
+    end
+
+    test "backpropagation errors if there is a conflict"
+  end
+
+  describe "when the source is a literal string" do
+
+    @opcode_string {:move, {:literal, "foo"}, {:x, 1}}
+    @string remote(String.t)
+
+    test "forwards the source value" do
+      state = Parser.new([@opcode_string], __MODULE__)
+
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [%Vm{xreg: %{1 => @string}}, %Vm{xreg: %{}}] = history
+    end
+
+    test "backpropagation is ok, if the values match" do
+      propagated = [@opcode_string]
+      |> Parser.new(__MODULE__)
+      |> Parser.do_forward
+
+      [[last | rest]] = propagated.histories
+
+      new_type = %{last | xreg: %{1 => @string}}
+
+      # rewrite the propragated information to contain typed information
+      # in the targeted register.
+      state = %{propagated | histories: [[new_type | rest]]}
+
+      Parser.do_backprop(state)
+    end
+
+    test "backpropagation errors if there is a conflict"
+  end
+
+  describe "when the source is a empty list" do
+
+    # empty list is represented as nil!!
+    @opcode_emptylist {:move, nil, {:x, 1}}
+    @string remote(String.t)
+
+    test "forwards the source value" do
+      state = Parser.new([@opcode_emptylist], __MODULE__)
+
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [%Vm{xreg: %{1 => []}}, %Vm{xreg: %{}}] = history
+    end
+
+    test "backpropagation is ok, if the values match" do
+      propagated = [@opcode_emptylist]
+      |> Parser.new(__MODULE__)
+      |> Parser.do_forward
+
+      [[last | rest]] = propagated.histories
+
+      new_type = %{last | xreg: %{1 => []}}
+
+      # rewrite the propragated information to contain typed information
+      # in the targeted register.
+      state = %{propagated | histories: [[new_type | rest]]}
+
+      Parser.do_backprop(state)
+    end
+
+    test "backpropagation errors if there is a conflict"
+  end
 end

@@ -93,7 +93,6 @@ defmodule Type.Inference.Block.Parser do
     advance(state, new_histories)
   end
 
-
   @spec do_all_backprop(t, [Vm.t], history, module) :: [history]
   defp do_all_backprop(state, replacement_vms, history, opcode_module) do
     Enum.flat_map(replacement_vms, fn vm ->
@@ -108,7 +107,6 @@ defmodule Type.Inference.Block.Parser do
     end)
   end
 
-
   def do_backprop(state, module \\ Type.Inference.Opcodes)
   def do_backprop(state = %{stack: []}, opcode_module) do
     # if we've run out of stack, then run the forward propagation
@@ -122,7 +120,6 @@ defmodule Type.Inference.Block.Parser do
           Enum.map(new_starting_points, &[&1 | earlier])
       end
     end)
-
     rollback(state, new_histories)
   end
 

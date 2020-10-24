@@ -17,7 +17,7 @@ defmodule Type.Inference.Opcodes do
     backprop(state) do
       prev_state = state
       |> put_reg(from, get_reg(state, to))
-      |> tombstone(from)
+      |> tombstone(to)
 
       {:ok, [prev_state]}
     end
@@ -28,8 +28,9 @@ defmodule Type.Inference.Opcodes do
       {:ok, put_reg(state, to, [])}
     end
 
-    #this is a lie.
-    backprop :terminal
+    backprop(state) do
+      {:ok, [tombstone(state, to)]}
+    end
   end
 
   opcode {:move, {:atom, atom}, {:x, to}} do
@@ -37,8 +38,9 @@ defmodule Type.Inference.Opcodes do
       {:ok, put_reg(state, to, atom)}
     end
 
-    #this is a lie.
-    backprop :terminal
+    backprop(state) do
+      {:ok, [tombstone(state, to)]}
+    end
   end
 
   opcode {:move, {:integer, value}, {:x, to}} do
@@ -46,8 +48,9 @@ defmodule Type.Inference.Opcodes do
       {:ok, put_reg(state, to, value)}
     end
 
-    #this is a lie.
-    backprop :terminal
+    backprop(state) do
+      {:ok, [tombstone(state, to)]}
+    end
   end
 
 
@@ -56,8 +59,9 @@ defmodule Type.Inference.Opcodes do
       {:ok, put_reg(state, to, Type.of(literal))}
     end
 
-    # this is a lie.
-    backprop :terminal
+    backprop(state) do
+      {:ok, [tombstone(state, to)]}
+    end
   end
 
   opcode {:gc_bif, :bit_size, _, 1, [x: from], {:x, to}} do
