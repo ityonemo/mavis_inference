@@ -4,7 +4,7 @@ defmodule Type.Inference.Block do
 
   @type t :: [%__MODULE__{
     needs: %{optional(integer) => Type.t},
-    makes: %{optional(integer) => Type.t}
+    makes: Type.t
   }]
 
   defdelegate parse(code), to: Type.Inference.Block.Parser
@@ -41,12 +41,8 @@ defmodule Type.Inference.Block.Parser do
 
   @spec release(t) :: Block.t
   def release(%{histories: histories}) do
-    histories
-    |> List.last  # get the params out
-    |> Enum.zip(List.first(histories))
-    |> Enum.map(fn {params, return} ->
-      %Block{needs: params, makes: return}
-    end)
+    Enum.map(histories,
+      &%Block{needs: List.first(&1).xreg, makes: List.last(&1).xreg[0]})
   end
 
   def do_analyze(state, module \\ Type.Inference.Opcodes)

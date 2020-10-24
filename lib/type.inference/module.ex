@@ -47,7 +47,7 @@ defmodule Type.Inference.Module do
         {:ok, %__MODULE__{
           entry_points: entry_points,
           block_lookup: block_lookup,
-          code: raw_opcodes
+          code: Enum.flat_map(raw_opcodes, &Function.identity/1)
         }}
       _ ->
         # TODO: make this not silly.

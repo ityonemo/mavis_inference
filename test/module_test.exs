@@ -28,8 +28,8 @@ defmodule TypeTest.ModuleTest do
 
       assert [block] = module.block_lookup[ep]
 
-      assert %{0 => builtin(:any)} = block.makes.xreg
-      assert %{0 => builtin(:any)} = block.needs.xreg
+      assert builtin(:any) = block.makes
+      assert %{0 => builtin(:any)} = block.needs
     end
   end
 
