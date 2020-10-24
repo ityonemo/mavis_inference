@@ -71,21 +71,34 @@ defmodule Type.Inference.Module.ParallelParser do
 
   @spec obtain_label(:beam_lib.label) :: Block.t
 
+  defp store_lookup({:done, label, fun, arity, block_lookup}) do
+    Process.put(label, block_lookup)
+    Process.put({fun, arity}, block_lookup)
+    block_lookup
+  end
+
   def obtain_label(label) do
-    receive do
-      {:done, ^label, _fun, _arity, label_io} -> label_io
+    if l = Process.get(label) do l else
+      receive do
+        lookup = {:done, ^label, _fun, _arity, _payload} ->
+          store_lookup(lookup)
+      end
     end
   end
 
   def obtain_call(fun, arity) do
-    receive do
-      {:done, _label, ^fun, ^arity, label_io} -> label_io
+    if l = Process.get({fun, arity}) do l else
+      receive do
+        lookup = {:done, _label, ^fun, ^arity, _payload} ->
+          store_lookup(lookup)
+      end
     end
   end
 
-  @spec send_lookup(pid, :beam_file.label, atom | nil, arity | nil, Block.t) :: term
+  @spec send_lookup(pid, :beam_file.label, atom | nil, arity | nil, Block.t) :: :ok
   def send_lookup(who, label, fun, arity, block_lookup) do
     send(who, {:done, label, fun, arity, block_lookup})
+    :ok
   end
 
 end

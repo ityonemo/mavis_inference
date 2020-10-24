@@ -118,6 +118,8 @@ defmodule Type.Inference.Opcodes do
       |> Enum.all?(&(&1 in Map.keys(state.xreg)))
       |> if do
         {:ok, put_reg(state, 0, lookup.makes)}
+      else
+        {:backprop, [merge_reg(state, lookup.needs)]}
       end
     end
   end
@@ -127,5 +129,8 @@ defmodule Type.Inference.Opcodes do
   end
   defp get_reg(state, reg) do
     state.xreg[reg]
+  end
+  defp merge_reg(state, registers) do
+    %{state | xreg: Map.merge(state.xreg, registers)}
   end
 end
