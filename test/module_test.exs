@@ -23,10 +23,12 @@ defmodule TypeTest.ModuleTest do
       common_setup(WithDef)
     end
 
-    test "produces an entry point for an exported function" , %{module: module} do
+    test "produces an entry point for an exported function", %{module: module} do
       assert %Module{entry_points: %{{:function, 1} => ep}} = module
+    end
 
-      assert [block] = module.block_lookup[ep]
+    test "produces a spec for the block", %{module: module} do
+      [block] = Module.lookup(module, :function, 1)
 
       assert builtin(:any) = block.makes
       assert %{0 => builtin(:any)} = block.needs
@@ -40,7 +42,14 @@ defmodule TypeTest.ModuleTest do
     end
 
     test "produces an entry point for the private function", %{module: module} do
-      assert %Module{entry_points: %{{:functionp, 1} => _ep}} = module
+      assert %Module{entry_points: %{{:functionp, 1} => ep}} = module
+    end
+
+    test "produces a spec for the block", %{module: module} do
+      [block] = Module.lookup(module, :function, 1)
+
+      assert builtin(:any) = block.makes
+      assert %{0 => builtin(:any)} = block.needs
     end
   end
 
@@ -51,7 +60,15 @@ defmodule TypeTest.ModuleTest do
     end
 
     test "produces an entry point for the lambda", %{module: module} do
-      assert %Module{entry_points: %{{:"-fun.functionp/1-", 1} => _ep}} = module
+      assert %Module{entry_points: %{{:"-fun.functionp/1-", 1} => ep}} = module
+    end
+
+    @empty_map %{}
+    test "produces a spec for the block", %{module: module} do
+      [block] = Module.lookup(module, :lambda, 0)
+
+      assert builtin(:any) = block.makes
+      assert @empty_map = block.needs
     end
   end
 end

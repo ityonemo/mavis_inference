@@ -55,6 +55,12 @@ defmodule Type.Inference.Module do
     end
   end
 
+  @spec lookup(t, atom, arity) :: Block.t
+  def lookup(module_struct, function, arity) do
+    entry_point = module_struct.entry_points[{function, arity}]
+    module_struct.block_lookup[entry_point]
+  end
+
   defp strip_function_header({:function, _name, _arity, _entrypoint, list}), do: list
 
   @spec opcodes_to_label_blocks(
