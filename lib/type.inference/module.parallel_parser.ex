@@ -14,11 +14,11 @@ defmodule Type.Inference.Module.ParallelParser do
     entry_points: Module.entry_points
   }
 
-  @spec parse(Module.label_blocks, module, Module.entry_points) ::
+  @spec parse(Module.block_lookup, module, Module.entry_points) ::
     %{optional(:beam_lib.label) => Type.t}
-  def parse(label_blocks, module, entry_points) do
+  def parse(block_lookup, module, entry_points) do
     # spin up a bunch of parsers in parallel
-    parsers = label_blocks
+    parsers = block_lookup
     |> Enum.map(fn {label, code} ->
       {label, Task.start_link(fn -> child(label, code) end)}
     end)

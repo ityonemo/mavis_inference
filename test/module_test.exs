@@ -26,7 +26,7 @@ defmodule TypeTest.ModuleTest do
     test "produces an entry point for an exported function" , %{module: module} do
       assert %Module{entry_points: %{{:function, 1} => ep}} = module
 
-      assert [block] = module.label_blocks[ep]
+      assert [block] = module.block_lookup[ep]
 
       assert %{0 => builtin(:any)} = block.makes.xreg
       assert %{0 => builtin(:any)} = block.needs.xreg

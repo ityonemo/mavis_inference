@@ -3,19 +3,22 @@ defmodule Type.Inference.Module do
   struct and operations for analyzing modules.
   """
 
-  defstruct [
-    label_blocks: %{},
-    entry_points: %{}
+  @enforce_keys [:code]
+  defstruct @enforce_keys ++ [
+    block_lookup: %{},
+    entry_points: %{},
   ]
 
   alias Type.Inference.Block
 
-  @type label_blocks :: %{optional(:beam_lib.label) => Block.t}
+  @type block_lookup :: %{optional(:beam_lib.label) => Block.t}
   @type entry_points :: %{optional({atom, arity}) => :beam_lib.label}
+  @opaque opcode :: tuple | :return
 
   @type t :: %__MODULE__{
-    label_blocks: label_blocks,
-    entry_points: entry_points
+    block_lookup: block_lookup,
+    entry_points: entry_points,
+    code: [opcode]
   }
 
   import Record
@@ -34,18 +37,17 @@ defmodule Type.Inference.Module do
         end)
         |> Enum.into(%{})
 
-        label_blocks = code
-        |> Enum.flat_map(fn fun_block ->
-          fun_block
-          |> strip_block
-          |> opcodes_to_label_blocks(nil, [], [])
-        end)
+        raw_opcodes = Enum.map(code, &strip_function_header/1)
+
+        block_lookup = raw_opcodes
+        |> Enum.flat_map(&opcodes_to_label_blocks(&1, nil, [], []))
         |> Enum.into(%{})
         |> ParallelParser.parse(module, entry_points)
 
         {:ok, %__MODULE__{
           entry_points: entry_points,
-          label_blocks: label_blocks
+          block_lookup: block_lookup,
+          code: raw_opcodes
         }}
       _ ->
         # TODO: make this not silly.
@@ -53,9 +55,7 @@ defmodule Type.Inference.Module do
     end
   end
 
-  defp strip_block({:function, _name, _arity, _entrypoint, list}), do: list
-
-  @opaque opcode :: tuple | :return
+  defp strip_function_header({:function, _name, _arity, _entrypoint, list}), do: list
 
   @spec opcodes_to_label_blocks(
     block :: [opcode],
