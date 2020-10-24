@@ -1,10 +1,9 @@
-defmodule Type.Inference.ParallelEngine do
+defmodule Type.Inference.Module.ParallelParser do
 
   @enforce_keys [:parsers, :parent, :module, :entry_points]
   defstruct @enforce_keys
 
-  import Type
-  alias Type.Inference.{Label, Module}
+  alias Type.Inference.{Block, Module}
 
   # stateful information for solving tasks.  This will be sent
   # via message to the task.
@@ -50,7 +49,7 @@ defmodule Type.Inference.ParallelEngine do
     init = receive do {:init, init} -> init end
 
     # DO SOMETHING WITH CODE
-    label_options = Label.parse(code)
+    label_options = Block.parse(code)
 
     [init.parent | Map.values(init.parsers)]
     |> Enum.map(&send(&1, {:done, label, label_options}))
@@ -60,7 +59,7 @@ defmodule Type.Inference.ParallelEngine do
       reraise %{e | code_block: code}, __STACKTRACE__
   end
 
-  @spec obtain_label(:beam_lib.label) :: Label.t
+  @spec obtain_label(:beam_lib.label) :: Block.t
 
   def obtain_label(label) do
     receive do

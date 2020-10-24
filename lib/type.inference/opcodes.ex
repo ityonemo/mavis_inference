@@ -4,8 +4,6 @@ defmodule Type.Inference.Opcodes do
 
   use Type.Inference.Macros
 
-  alias Type.Inference.ParallelEngine
-
   opcode {:move, {:x, from}, {:x, to}} do
     forward(state) do
       {:ok, put_reg(state, to, get_reg(state, from))}
@@ -72,21 +70,11 @@ defmodule Type.Inference.Opcodes do
   end
 
   opcode {:select_val, {:x, from}, {:f, _fail}, {:list, list}} do
-    forward(state) do
-      # better logic later.
-      {:ok, put_reg(state, 0, builtin(:any))}
-    end
-    backprop :terminal
+    :unimplemented
   end
 
   opcode {:call_ext_only, _arity, {:extfunc, mod, fun, abcd}} do
-    forward(state) do
-      # currently, be shitty.
-      {:ok, put_reg(state, 0, builtin(:any))}
-    end
-
-    # temporary, definitely a lie.
-    backprop :terminal
+    :unimplemented
   end
 
   opcode {:make_fun2, {module, fun, arity}, _, _, _} do

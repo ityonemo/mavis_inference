@@ -8,9 +8,9 @@ defmodule Type.Inference.Module do
     entry_points: %{}
   ]
 
-  alias Type.Inference.Label
+  alias Type.Inference.Block
 
-  @type label_blocks :: %{optional(:beam_lib.label) => Label.t}
+  @type label_blocks :: %{optional(:beam_lib.label) => Block.t}
   @type entry_points :: %{optional({atom, arity}) => :beam_lib.label}
 
   @type t :: %__MODULE__{
@@ -21,7 +21,7 @@ defmodule Type.Inference.Module do
   import Record
   defrecord :beam_file, Record.extract(:beam_file, from_lib: "compiler/src/beam_disasm.hrl")
 
-  alias Type.Inference.ParallelEngine
+  alias Type.Inference.Module.ParallelParser
 
   @spec from_binary(binary) :: {:ok, t} | {:error, term}
   def from_binary(binary) do
@@ -41,7 +41,7 @@ defmodule Type.Inference.Module do
           |> opcodes_to_label_blocks(nil, [], [])
         end)
         |> Enum.into(%{})
-        |> ParallelEngine.parse(module, entry_points)
+        |> ParallelParser.parse(module, entry_points)
 
         {:ok, %__MODULE__{
           entry_points: entry_points,
@@ -52,8 +52,6 @@ defmodule Type.Inference.Module do
         {:error, "unable to disassemble"}
     end
   end
-
-  defp export_to_ep_kv({export, arity, ep}), do: {{export, arity}, ep}
 
   defp strip_block({:function, _name, _arity, _entrypoint, list}), do: list
 

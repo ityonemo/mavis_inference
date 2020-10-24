@@ -1,4 +1,4 @@
-defmodule Type.Inference.Label do
+defmodule Type.Inference.Block do
   @enforce_keys [:needs, :makes]
   defstruct @enforce_keys
 
@@ -7,10 +7,10 @@ defmodule Type.Inference.Label do
     makes: %{optional(integer) => Type.t}
   }]
 
-  defdelegate parse(code), to: Type.Inference.Label.Parser
+  defdelegate parse(code), to: Type.Inference.Block.Parser
 end
 
-defmodule Type.Inference.Label.Parser do
+defmodule Type.Inference.Block.Parser do
   @enforce_keys [:code]
 
   alias Type.Inference.{Vm, Module}
@@ -28,24 +28,24 @@ defmodule Type.Inference.Label.Parser do
     histories: [history]
   }
 
-  alias Type.Inference.Label
+  alias Type.Inference.Block
 
   # TODO: fix it so it's not Module.opcode
 
-  @spec parse([Module.opcode]) :: Label.t
+  @spec parse([Module.opcode]) :: Block.t
   def parse(code) do
     %__MODULE__{code: code}
     |> do_analyze
     |> release
   end
 
-  @spec release(t) :: Label.t
+  @spec release(t) :: Block.t
   def release(%{histories: histories}) do
     histories
     |> List.last  # get the params out
     |> Enum.zip(List.first(histories))
     |> Enum.map(fn {params, return} ->
-      %Label{needs: params, makes: return}
+      %Block{needs: params, makes: return}
     end)
   end
 
