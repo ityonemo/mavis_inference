@@ -122,6 +122,8 @@ defmodule Type.Inference.Opcodes do
         {:backprop, [merge_reg(state, lookup.needs)]}
       end
     end
+
+    backprop :terminal
   end
 
   defp put_reg(state, reg, type) do
