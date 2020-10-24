@@ -72,19 +72,11 @@ defmodule Type.Inference.Opcodes do
   end
 
   opcode {:select_val, {:x, from}, {:f, _fail}, {:list, list}} do
-    forward(reg) do
-      # first make sure
-      list
-      |> Enum.chunk_every(2)
-      |> Enum.reduce(reg, &reduce_select/2)
+    forward(state) do
+      # better logic later.
+      {:ok, put_reg(state, 0, builtin(:any))}
     end
     backprop :terminal
-  end
-
-  defp reduce_select([_what, f: jump], _reg) do
-    ParallelEngine.obtain_label(jump)
-    |> IO.inspect(label: "75")
-    raise "yoyo"
   end
 
   opcode {:call_ext_only, _arity, {:extfunc, mod, fun, abcd}} do
@@ -123,6 +115,10 @@ defmodule Type.Inference.Opcodes do
       {:ok, put_reg(state, 0, builtin(:none))}
     end
     backprop :terminal
+  end
+
+  opcode {:call_only, _, _} do
+    :unimplemented
   end
 
   defp put_reg(state, reg, type) do

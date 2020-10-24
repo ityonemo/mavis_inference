@@ -8,7 +8,9 @@ defmodule Type.Inference.Module do
     entry_points: %{}
   ]
 
-  @type label_blocks :: %{optional(:beam_lib.label) => Type.t}
+  alias Type.Inference.Label
+
+  @type label_blocks :: %{optional(:beam_lib.label) => Label.t}
   @type entry_points :: %{optional({atom, arity}) => :beam_lib.label}
 
   @type t :: %__MODULE__{
@@ -24,9 +26,12 @@ defmodule Type.Inference.Module do
   @spec from_binary(binary) :: {:ok, t} | {:error, term}
   def from_binary(binary) do
     case :beam_disasm.file(binary) do
-      beam_file(module: module, labeled_exports: exports, code: code) ->
-        entry_points = exports
-        |> Enum.map(&export_to_ep_kv/1)
+      beam_file(module: module, code: code) ->
+        entry_points = code
+        |> Enum.map(fn
+          {:function, name, arity, entry_point, _code} ->
+            {{name, arity}, entry_point}
+        end)
         |> Enum.into(%{})
 
         label_blocks = code

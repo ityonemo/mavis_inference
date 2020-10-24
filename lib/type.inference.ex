@@ -17,6 +17,8 @@ defmodule Type.Inference do
     regs:  [[reg_state]]
   }
 
+  import Type
+
   ## API implementation
   @info_parts [:module, :name, :arity, :env]
   def infer(lambda) when is_function(lambda) do
@@ -25,16 +27,28 @@ defmodule Type.Inference do
     |> Keyword.take(@info_parts)
     |> Keyword.values()
 
-    infer({module, fun, arity})
+    case infer({module, fun, arity}) do
+      f = {:ok, _} -> f
+      :unknown -> {:ok, %Type.Function{
+        params: any_for(arity),
+        return: builtin(:any)
+      }}
+    end
   end
   def infer({module, fun, arity}) do
-    case :code.get_object_code(module) do
-      {^module, binary, _filepath} ->
-        Type.Inference.Module.from_binary(binary)
-
-
-      :error ->
-        :unknown
+    mf = {module, fun}
+    with {^module, binary, _filepath} <- :code.get_object_code(module),
+         {:ok, mod_struct} <- Type.Inference.Module.from_binary(binary),
+         %{^mf => label} <- mod_struct.entry_points,
+         %{^label => types} <- mod_struct.label_blocks do
+      types
+    else
+      _ -> :unknown
     end
+  end
+
+  def any_for(0), do: []
+  def any_for(arity) do
+    for _ <- 1..arity, do: builtin(:any)
   end
 end

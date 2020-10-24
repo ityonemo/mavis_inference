@@ -8,17 +8,33 @@ defmodule TypeTest.ModuleTest do
 
   import Type
 
-  test "from_binary/1 produces the expected content" do
-    {_, binary, _} = :code.get_object_code(TypeTest.ModuleExample)
+  describe "when the module has an exported function via def" do
+    test "from_binary/1 produces an entry point for an exported function" do
+      {_, binary, _} = :code.get_object_code(TypeTest.ModuleExamples.WithDef)
 
-    module = Module.from_binary(binary)
+      {:ok, module} = Module.from_binary(binary)
 
-    assert %Module{
-      label_blocks: blocks,
-      entry_points: %{{:function, 1} => ep}
-    } = module
+      assert %Module{entry_points: %{{:function, 1} => _ep}} = module
+    end
+  end
 
-    assert %{^ep => %Function{params: [builtin(:any)], return: builtin(:any)}}
-      = blocks
+  describe "when the module has a private function via defp" do
+    test "from_binary/1 produces an entry point for the private function" do
+      {_, binary, _} = :code.get_object_code(TypeTest.ModuleExamples.WithDefp)
+
+      {:ok, module} = Module.from_binary(binary)
+
+      assert %Module{entry_points: %{{:functionp, 1} => _ep}} = module
+    end
+  end
+
+  describe "when the module has a lambda" do
+    test "from_binary/1 produces an entry point for the lambda" do
+      {_, binary, _} = :code.get_object_code(TypeTest.ModuleExamples.WithLambda)
+
+      {:ok, module} = Module.from_binary(binary)
+
+      assert %Module{entry_points: %{{:"-fun.functionp/1-", 1} => _ep}} = module
+    end
   end
 end

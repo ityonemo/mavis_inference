@@ -1,8 +1,19 @@
 defmodule Type.Inference.Label do
+  @enforce_keys [:needs, :makes]
+  defstruct @enforce_keys
 
+  @type t :: [%__MODULE__{
+    needs: %{optional(integer) => Type.t},
+    makes: %{optional(integer) => Type.t}
+  }]
+
+  defdelegate parse(code), to: Type.Inference.Label.Parser
+end
+
+defmodule Type.Inference.Label.Parser do
   @enforce_keys [:code]
 
-  alias Type.Inference.{Module, Vm}
+  alias Type.Inference.{Vm, Module}
 
   defstruct @enforce_keys ++ [
     stack: [],
@@ -17,25 +28,25 @@ defmodule Type.Inference.Label do
     histories: [history]
   }
 
-  @spec parse([Module.opcode]) :: Type.t
+  alias Type.Inference.Label
+
+  # TODO: fix it so it's not Module.opcode
+
+  @spec parse([Module.opcode]) :: Label.t
   def parse(code) do
     %__MODULE__{code: code}
     |> do_analyze
     |> release
   end
 
-  @spec release(t) :: Type.t
+  @spec release(t) :: Label.t
   def release(%{histories: histories}) do
     histories
     |> List.last  # get the params out
     |> Enum.zip(List.first(histories))
     |> Enum.map(fn {params, return} ->
-      %Type.Function{
-        params: Map.values(params.xreg),
-        return: return.xreg[0]
-      }
+      %Label{needs: params, makes: return}
     end)
-    |> Enum.into(%Type.Union{})
   end
 
   def do_analyze(state, module \\ Type.Inference.Opcodes)
@@ -47,8 +58,6 @@ defmodule Type.Inference.Label do
   end
 
   # TODO: make check invariants on do_forward
-
-  import Type.Inference.Macros
 
   def do_forward(state, module \\ Type.Inference.Opcodes)
   def do_forward(state = %{code: [instr | _]}, module) do
@@ -94,22 +103,6 @@ defmodule Type.Inference.Label do
   end
   def do_backprop(state, module) do
     raise "no backprop yet"
-    # performs backpropagation on the current state.
-    # first, run the backpropagation and answer the question:
-    # did we need to change any of the forward enties.
-    #%{stack: [this | _], shards: [[latest], [prev] | _]} = state
-#
-    #case module.backprop(this, latest) do
-    #  {:ok, ^prev} ->
-    #    state
-    #  {:ok, replacement} ->
-    #    state
-    #    |> pop_reg_replace([replacement])
-    #    |> unshift
-    #    |> do_backprop(module)
-    #  {:error, _} ->
-    #    %{state | shards: [[] | tl(state.regs)]}
-    #end
   end
 
   ###############################################################
@@ -121,6 +114,4 @@ defmodule Type.Inference.Label do
       shards: [shards | state.shards],
       stack: [hd(state.code) | state.stack]}
   end
-
-
 end

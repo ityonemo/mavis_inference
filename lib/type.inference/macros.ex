@@ -29,6 +29,8 @@ defmodule Type.Inference.Macros do
     end
   end
 
+  @blank {:state, [], Elixir}
+
   def opcode_impl(op_ast, ast) do
     {fwd_asts, freg_asts, bck_asts, breg_asts} = case ast do
       {:__block__, _, headers} ->
@@ -45,7 +47,9 @@ defmodule Type.Inference.Macros do
         {fwd_asts, freg_asts, bck_asts, breg_asts}
       {:forward, _, [reg_ast, [do: fwd_ast]]} ->
 
-        {fwd_ast, reg_ast, {:ok, {:reg, [], Elixir}}, {:reg, [], Elixir}}
+        {fwd_ast, reg_ast, {:ok, @blank}, @blank}
+      :unimplemented ->
+        {{:ok, @blank}, @blank, {:ok, @blank}, @blank}
     end
 
     rebuild_functions(List.wrap(bck_asts), List.wrap(breg_asts), op_ast, :backprop) ++
