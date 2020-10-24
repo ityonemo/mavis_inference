@@ -49,4 +49,45 @@ defmodule TypeTest.Opcode.CallOnlyTest do
       ] = history
     end
   end
+
+  describe "when forward propagating the call_only, 2 opcode" do
+
+    @opcode_1 {:call_only, 2, {__MODULE__, :fun, 2}}
+
+    setup do
+      # preseed the test thread with a message containing the block
+      # spec for the function that it is going to look up!
+      ParallelParser.send_lookup(self(), nil, :fun, 2, [%Block{
+        needs: %{0 => builtin(:integer), 1 => builtin(:integer)},
+        makes: builtin(:float)
+      }])
+    end
+
+    test "forwards the value in register 0" do
+      state = %Parser{code: [@opcode_1], histories: [[
+        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}}
+      ]]}
+
+      %Parser{histories: [history]} = Parser.do_forward(state)
+
+      # note that history is prepended-to.
+
+      assert [
+        %Vm{xreg: %{0 => builtin(:float), 1 => builtin(:integer)}},
+        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}}
+      ] = history
+    end
+
+    test "backpropagates to require a value in register 0" do
+      state = %Parser{code: [@opcode_1]}
+
+      %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [
+        %Vm{xreg: %{0 => builtin(:float), 1 => builtin(:integer)}},
+        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}}
+      ] = history
+    end
+  end
+
 end
