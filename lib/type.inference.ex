@@ -36,12 +36,12 @@ defmodule Type.Inference do
     end
   end
   def infer({module, fun, arity}) do
-    mf = {module, fun}
+    fa = {fun, arity}
     with {^module, binary, _filepath} <- :code.get_object_code(module),
          {:ok, mod_struct} <- Type.Inference.Module.from_binary(binary),
-         %{^mf => label} <- mod_struct.entry_points,
+         %{^fa => label} <- mod_struct.entry_points,
          %{^label => types} <- mod_struct.block_lookup do
-      types
+      {:ok, Type.Inference.Block.to_function(types)}
     else
       _ -> :unknown
     end
