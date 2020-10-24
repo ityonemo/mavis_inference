@@ -7,7 +7,7 @@ defmodule Type.Inference.Opcodes do
   # MOVE SEMANTICS
 
   opcode {:move, {:x, from}, {:x, to}} do
-    forward(state) do
+    forward(state, ...) do
       if is_map_key(state.xreg, from) do
         {:ok, put_reg(state, to, get_reg(state, from))}
       else
@@ -16,7 +16,7 @@ defmodule Type.Inference.Opcodes do
       end
     end
 
-    backprop(state) do
+    backprop(state, ...) do
       prev_state = state
       |> put_reg(from, get_reg(state, to))
       |> tombstone(to)
@@ -26,10 +26,10 @@ defmodule Type.Inference.Opcodes do
   end
 
   opcode {:move, value, {:x, to}} do
-    forward(state) do
+    forward(state, ...) do
       {:ok, put_reg(state, to, type_of(value))}
     end
-    backprop(state) do
+    backprop(state, ...) do
       {:ok, [tombstone(state, to)]}
     end
   end
@@ -38,7 +38,7 @@ defmodule Type.Inference.Opcodes do
   defp type_of({_, value}), do: Type.of(value)
 
   opcode {:gc_bif, :bit_size, _, 1, [x: from], {:x, to}} do
-    forward(state) do
+    forward(state, ...) do
       {:ok, put_reg(state, 0, builtin(:non_neg_integer))}
     end
 
@@ -50,7 +50,7 @@ defmodule Type.Inference.Opcodes do
   @number Type.union(builtin(:float), builtin(:integer))
 
   opcode {:gc_bif, :+, {:f, to}, 2, [x: left, x: right], _} do
-    forward(state) do
+    forward(state, ...) do
       {:ok, put_reg(state, 0, @number)}
     end
     backprop :terminal
@@ -67,7 +67,7 @@ defmodule Type.Inference.Opcodes do
   opcode {:make_fun2, {module, fun, arity}, _, _, _} do
     # best guess:
     # ignore the last three terms.  Drops the mfa into register x0 always.
-    forward(state = %{module: module}) do
+    forward(state = %{module: module}, ...) do
       return = fun
       |> ParallelParser.obtain_call(arity)
       |> Type.Inference.Block.to_function
@@ -75,16 +75,16 @@ defmodule Type.Inference.Opcodes do
       {:ok, put_reg(state, 0, return)}
     end
 
-    forward(_) do
+    forward(_, ...) do
       raise "unimplemented"
     end
   end
 
   opcode :return do
-    forward(state = %{xreg: %{0 => _type}}) do
+    forward(state = %{xreg: %{0 => _type}}, ...) do
       {:ok, state}
     end
-    forward(state = %{xreg: %{}}) do
+    forward(state = %{xreg: %{}}, ...) do
       {:backprop, [put_reg(state, 0, builtin(:any))]}
     end
     backprop :terminal
@@ -93,7 +93,7 @@ defmodule Type.Inference.Opcodes do
   opcode {:line, _}
 
   opcode {:func_info, _, _, _} do
-    forward(state) do
+    forward(state, ...) do
       {:ok, put_reg(state, 0, builtin(:none))}
     end
     backprop :terminal
@@ -102,7 +102,7 @@ defmodule Type.Inference.Opcodes do
   alias Type.Inference.Module.ParallelParser
 
   opcode {:call_only, _arity1, {_this_module, function, arity}} do
-    forward(state) do
+    forward(state, ...) do
       # TODO: allow this to take alternate specs
       [lookup] = ParallelParser.obtain_call(function, arity)
 

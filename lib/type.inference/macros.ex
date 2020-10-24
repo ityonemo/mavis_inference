@@ -37,7 +37,8 @@ defmodule Type.Inference.Macros do
         funs = Enum.group_by(headers,
           fn {key, _, _} -> key end,
           fn
-            {_, _, [reg_ast, [do: code_ast]]} -> {reg_ast, code_ast}
+            {_, _, [reg_ast, {:..., _, _}, [do: code_ast]]} ->
+              {reg_ast, code_ast}
             {:backprop, _, [:terminal]} -> {:_, terminal_ast(op_ast)}
           end)
 
