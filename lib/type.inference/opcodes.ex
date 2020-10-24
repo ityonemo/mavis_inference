@@ -4,6 +4,8 @@ defmodule Type.Inference.Opcodes do
 
   use Type.Inference.Macros
 
+  # MOVE SEMANTICS
+
   opcode {:move, {:x, from}, {:x, to}} do
     forward(state) do
       if is_map_key(state.xreg, from) do
@@ -23,46 +25,17 @@ defmodule Type.Inference.Opcodes do
     end
   end
 
-  opcode {:move, nil, {:x, to}} do
+  opcode {:move, value, {:x, to}} do
     forward(state) do
-      {:ok, put_reg(state, to, [])}
+      {:ok, put_reg(state, to, type_of(value))}
     end
-
     backprop(state) do
       {:ok, [tombstone(state, to)]}
     end
   end
 
-  opcode {:move, {:atom, atom}, {:x, to}} do
-    forward(state) do
-      {:ok, put_reg(state, to, atom)}
-    end
-
-    backprop(state) do
-      {:ok, [tombstone(state, to)]}
-    end
-  end
-
-  opcode {:move, {:integer, value}, {:x, to}} do
-    forward(state) do
-      {:ok, put_reg(state, to, value)}
-    end
-
-    backprop(state) do
-      {:ok, [tombstone(state, to)]}
-    end
-  end
-
-
-  opcode {:move, {:literal, literal}, {:x, to}} do
-    forward(state) do
-      {:ok, put_reg(state, to, Type.of(literal))}
-    end
-
-    backprop(state) do
-      {:ok, [tombstone(state, to)]}
-    end
-  end
+  defp type_of(nil), do: []
+  defp type_of({_, value}), do: Type.of(value)
 
   opcode {:gc_bif, :bit_size, _, 1, [x: from], {:x, to}} do
     forward(state) do
