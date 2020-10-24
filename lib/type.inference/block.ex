@@ -8,16 +8,29 @@ defmodule Type.Inference.Block do
   }]
 
   defdelegate parse(code, module), to: Type.Inference.Block.Parser
+
+  @spec to_function(t) :: Type.t
+  def to_function(blocks) do
+    blocks
+    |> Enum.map(fn block ->
+      %Type.Function{
+        params: Map.values(block.needs),
+        return: block.makes,
+        inferred: true
+      }
+    end)
+    |> Enum.into(%Type.Union{})
+  end
+
 end
 
 defmodule Type.Inference.Block.Parser do
-  @enforce_keys [:code, :module]
+  @enforce_keys [:code, :module, :histories]
 
   alias Type.Inference.{Vm, Module}
 
   defstruct @enforce_keys ++ [
-    stack: [],
-    histories: [[%Vm{}]]
+    stack: []
   ]
 
   @type history :: [Vm.t]
@@ -32,9 +45,17 @@ defmodule Type.Inference.Block.Parser do
 
   # TODO: fix it so it's not Module.opcode
 
+  def new(code, module, regs \\ %{}) do
+    %__MODULE__{
+      code: code,
+      module: module,
+      histories: [[%Vm{module: module, xreg: regs}]]}
+  end
+
   @spec parse([Module.opcode], module) :: Block.t
   def parse(code, module) do
-    %__MODULE__{code: code, module: module}
+    code
+    |> new(module)
     |> do_analyze
     |> release
   end
@@ -42,7 +63,7 @@ defmodule Type.Inference.Block.Parser do
   @spec release(t) :: Block.t
   def release(%{histories: histories}) do
     Enum.map(histories,
-      &%Block{needs: List.first(&1).xreg, makes: List.last(&1).xreg[0]})
+      &%Block{needs: List.last(&1).xreg, makes: List.first(&1).xreg[0]})
   end
 
   def do_analyze(state, module \\ Type.Inference.Opcodes)

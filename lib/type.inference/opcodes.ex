@@ -82,13 +82,13 @@ defmodule Type.Inference.Opcodes do
     # ignore the last three terms.  Drops the mfa into register x0 always.
 
     forward(state) do
-      module |> IO.inspect(label: "85")
-      fun |> IO.inspect(label: "86")
-      arity |> IO.inspect(label: "87")
+      if state.module == module do
+        return = fun
+        |> ParallelParser.obtain_call(arity)
+        |> Type.Inference.Block.to_function
 
-
-      any_fun = %Type.Function{params: [builtin(:any)], return: builtin(:any)}
-      {:ok, put_reg(state, 0, any_fun)}
+        {:ok, put_reg(state, 0, return)}
+      end
     end
   end
 

@@ -17,8 +17,9 @@ defmodule TypeTest.ModuleTest do
     {:ok, module: module_struct}
   end
 
-  describe "when the module has an exported function via def, from_binary/1" do
+  @any builtin(:any)
 
+  describe "when the module has an exported function via def, from_binary/1" do
     setup do
       common_setup(WithDef)
     end
@@ -30,8 +31,8 @@ defmodule TypeTest.ModuleTest do
     test "produces a spec for the block", %{module: module} do
       [block] = Module.lookup(module, :function, 1)
 
-      assert builtin(:any) = block.makes
-      assert %{0 => builtin(:any)} = block.needs
+      assert @any = block.makes
+      assert %{0 => @any} = block.needs
     end
   end
 
@@ -48,8 +49,8 @@ defmodule TypeTest.ModuleTest do
     test "produces a spec for the block", %{module: module} do
       [block] = Module.lookup(module, :function, 1)
 
-      assert builtin(:any) = block.makes
-      assert %{0 => builtin(:any)} = block.needs
+      assert @any = block.makes
+      assert %{0 => @any} = block.needs
     end
   end
 
@@ -65,14 +66,10 @@ defmodule TypeTest.ModuleTest do
 
     @empty_map %{}
     test "produces a spec for the block", %{module: module} do
-
-      Module.code(module, :lambda, 0)
-      |> IO.inspect(label: "70")
-
       [block] = Module.lookup(module, :lambda, 0)
-      |> IO.inspect(label: "73")
 
-      assert builtin(:any) = block.makes
+      assert %Type.Function{params: [@any], inferred: true, return: @any} =
+        block.makes
       assert @empty_map = block.needs
     end
   end

@@ -15,7 +15,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
 
   describe "when forward propagating the call_only, 0 opcode" do
 
-    @opcode_1 {:call_only, 0, {__MODULE__, :fun, 1}}
+    @opcode_0 {:call_only, 0, {__MODULE__, :fun, 1}}
 
     setup do
       # preseed the test thread with a message containing the block
@@ -27,14 +27,9 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "clobbers the value in register 0" do
-      state = %Parser{
-        code: [@opcode_1],
-        module: __MODULE__,
-        histories: [[
-          %Vm{xreg: %{0 => builtin(:integer)}}
-        ]]}
+      state = Parser.new([@opcode_0], __MODULE__, %{0 => builtin(:integer)})
 
-      %Parser{histories: [history]} = Parser.do_forward(state)
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
         %Vm{xreg: %{0 => builtin(:float)}},
@@ -57,14 +52,9 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "forwards the value in register 0" do
-      state = %Parser{
-        code: [@opcode_1],
-        module: __MODULE__,
-        histories: [[
-          %Vm{xreg: %{0 => builtin(:integer)}}
-        ]]}
+      state = Parser.new([@opcode_1], __MODULE__, %{0 => builtin(:integer)})
 
-      %Parser{histories: [history]} = Parser.do_forward(state)
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
         %Vm{xreg: %{0 => builtin(:integer)}},
@@ -73,9 +63,9 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "backpropagates to require a value in register 0" do
-      state = %Parser{code: [@opcode_1], module: __MODULE__}
+      state = Parser.new([@opcode_1], __MODULE__)
 
-      %Parser{histories: [history]} = Parser.do_forward(state)
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
         %Vm{xreg: %{0 => builtin(:integer)}},
@@ -86,7 +76,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
 
   describe "when forward propagating the call_only, 2 opcode" do
 
-    @opcode_1 {:call_only, 2, {__MODULE__, :fun, 2}}
+    @opcode_2 {:call_only, 2, {__MODULE__, :fun, 2}}
 
     setup do
       # preseed the test thread with a message containing the block
@@ -98,17 +88,11 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "forwards the value in register 0" do
-      state = %Parser{
-        code: [@opcode_1],
-        module: __MODULE__,
-        histories: [[
-          %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}}
-        ]]}
+      state = Parser.new([@opcode_2], __MODULE__, %{0 => builtin(:integer), 1 => builtin(:integer)})
 
-      %Parser{histories: [history]} = Parser.do_forward(state)
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       # note that history is prepended-to.
-
       assert [
         %Vm{xreg: %{0 => builtin(:float), 1 => builtin(:integer)}},
         %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}}
@@ -116,9 +100,9 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "backpropagates to require a value in register 0" do
-      state = %Parser{code: [@opcode_1], module: __MODULE__}
+      state = Parser.new([@opcode_2], __MODULE__)
 
-      %Parser{histories: [history]} = Parser.do_forward(state)
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
         %Vm{xreg: %{0 => builtin(:float), 1 => builtin(:integer)}},

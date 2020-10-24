@@ -3,12 +3,14 @@ defmodule Type.Inference.Vm do
   struct which represents the virtual machine
   """
 
-  defstruct [
+  @enforce_keys [:module]
+  defstruct @enforce_keys ++ [
     xreg: %{},
     yreg: %{}
   ]
 
   @type t :: %__MODULE__{
+    module: module,
     xreg: %{integer => Type.t},
     yreg: %{integer => Type.t}
   }
