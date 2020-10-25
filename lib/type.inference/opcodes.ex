@@ -39,11 +39,20 @@ defmodule Type.Inference.Opcodes do
 
   opcode {:gc_bif, :bit_size, _, 1, [x: from], {:x, to}} do
     forward(state, ...) do
-      {:ok, put_reg(state, 0, builtin(:non_neg_integer))}
+      if is_map_key(state.xreg, from) do
+        {:ok, put_reg(state, 0, builtin(:non_neg_integer))}
+      else
+        prev_state = state
+        |> tombstone(to)
+        |> put_reg(from, %Type.Bitstring{size: 0, unit: 1})
+
+        {:backprop, [prev_state]}
+      end
     end
 
-    #this is a lie.
-    backprop :terminal
+    backprop(state, ...) do
+      raise "unimplemented"
+    end
   end
 
   # TODO: make this not be as crazy

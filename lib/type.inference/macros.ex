@@ -20,7 +20,7 @@ defmodule Type.Inference.Macros do
       def forward(unquote(op_ast), registers), do: {:ok, registers}
     end
     bck = quote do
-      def backprop(unquote(op_ast), registers), do: {:ok, registers}
+      def backprop(unquote(op_ast), registers), do: {:ok, [registers]}
     end
 
     quote do
@@ -48,9 +48,9 @@ defmodule Type.Inference.Macros do
         {fwd_asts, freg_asts, bck_asts, breg_asts}
       {:forward, _, [reg_ast, [do: fwd_ast]]} ->
 
-        {fwd_ast, reg_ast, {:ok, @blank}, @blank}
+        {fwd_ast, reg_ast, {:ok, [@blank]}, @blank}
       :unimplemented ->
-        {{:ok, @blank}, @blank, {:ok, @blank}, @blank}
+        {{:ok, @blank}, @blank, {:ok, [@blank]}, @blank}
     end
 
     rebuild_functions(List.wrap(bck_asts), List.wrap(breg_asts), op_ast, :backprop) ++

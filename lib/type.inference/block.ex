@@ -9,12 +9,14 @@ defmodule Type.Inference.Block do
 
   defdelegate parse(code, module), to: Type.Inference.Block.Parser
 
+  import Type
+
   @spec to_function(t) :: Type.t
   def to_function(blocks) do
     blocks
     |> Enum.map(fn block ->
       %Type.Function{
-        params: Map.values(block.needs),
+        params: get_params(block),
         return: block.makes,
         inferred: true
       }
@@ -22,6 +24,16 @@ defmodule Type.Inference.Block do
     |> Enum.into(%Type.Union{})
   end
 
+  defp get_params(%{needs: needs}) when needs == %{}, do: []
+  defp get_params(block) do
+    max_key = block.needs
+    |> Map.keys
+    |> Enum.max
+
+    for idx <- 0..max_key do
+      if type = block.needs[idx], do: type, else: builtin(:any)
+    end
+  end
 end
 
 defmodule Type.Inference.Block.Parser do
