@@ -13,7 +13,7 @@ defmodule TypeTest.Opcode.ReturnTest do
 
   describe "when forward propagating the return opcode" do
     test "forwards the value in register 0" do
-      state = Parser.new([:return], [module: __MODULE__], %{0 => builtin(:integer)})
+      state = Parser.new([:return], preload: %{0 => builtin(:integer)})
 
       %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -24,7 +24,7 @@ defmodule TypeTest.Opcode.ReturnTest do
     end
 
     test "backpropagates to require a value in register 0" do
-      state = Parser.new([:return], module: __MODULE__)
+      state = Parser.new([:return])
 
       %Parser{histories: [history]} = Parser.do_forward(state)
 

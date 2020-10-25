@@ -16,7 +16,7 @@ defmodule TypeTest.Opcode.GcBifTest do
 
     @opcode_bitsz {:gc_bif, :bit_size, {:f, 0}, 1, [x: 1], {:x, 0}}
     test "forward propagates returns non_neg_integer" do
-      state = Parser.new([@opcode_bitsz], [module: __MODULE__], %{1 => @bitstring})
+      state = Parser.new([@opcode_bitsz], preload: %{1 => @bitstring})
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -29,7 +29,7 @@ defmodule TypeTest.Opcode.GcBifTest do
     test "forward propagates a fixed number if the size is fixed"
 
     test "backpropagates to require a value in register 1" do
-      state = Parser.new([@opcode_bitsz], module: __MODULE__)
+      state = Parser.new([@opcode_bitsz])
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 

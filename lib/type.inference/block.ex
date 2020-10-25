@@ -60,11 +60,14 @@ defmodule Type.Inference.Block.Parser do
 
   alias Type.Inference.Block
 
-  # TODO: fix it so it's not Module.opcode
+  def new(code, meta \\ []) do
+    metadata = meta
+    |> Enum.into(%{})
+    |> Map.put_new(:module, nil)
 
-  def new(code, meta, regs \\ %{})
-  def new(code, meta, regs) when is_list(meta) do
-    new(code, Enum.into(meta, %{}), regs)
+    regs = meta[:preload] || %{}
+
+    new(code, metadata, regs)
   end
   def new(code, meta, regs) do
     %__MODULE__{
@@ -74,7 +77,7 @@ defmodule Type.Inference.Block.Parser do
   end
 
   @spec parse([Module.opcode], keyword | map) :: Block.t
-  def parse(code, metadata) do
+  def parse(code, metadata \\ []) do
     code
     |> new(metadata)
     |> do_analyze
