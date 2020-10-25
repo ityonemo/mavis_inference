@@ -37,7 +37,7 @@ defmodule Type.Inference.Block do
 end
 
 defmodule Type.Inference.Block.Parser do
-  @enforce_keys [:code, :module, :histories]
+  @enforce_keys [:code, :histories, :meta]
 
   alias Type.Inference.{Vm, Module}
 
@@ -46,28 +46,37 @@ defmodule Type.Inference.Block.Parser do
   ]
 
   @type history :: [Vm.t]
+  @type metadata :: %{
+    required(:module) => module,
+    optional(:fa) => {atom, arity}
+  }
 
   @type t :: %__MODULE__{
     code: [Module.opcode],
     stack: [Module.opcode],
-    histories: [history]
+    histories: [history],
+    meta: metadata
   }
 
   alias Type.Inference.Block
 
   # TODO: fix it so it's not Module.opcode
 
-  def new(code, module, regs \\ %{}) do
+  def new(code, meta, regs \\ %{})
+  def new(code, meta, regs) when is_list(meta) do
+    new(code, Enum.into(meta, %{}), regs)
+  end
+  def new(code, meta, regs) do
     %__MODULE__{
       code: code,
-      module: module,
-      histories: [[%Vm{module: module, xreg: regs}]]}
+      meta: meta,
+      histories: [[%Vm{module: meta.module, xreg: regs}]]}
   end
 
-  @spec parse([Module.opcode], module) :: Block.t
-  def parse(code, module) do
+  @spec parse([Module.opcode], keyword | map) :: Block.t
+  def parse(code, metadata) do
     code
-    |> new(module)
+    |> new(metadata)
     |> do_analyze
     |> release
   end
@@ -135,7 +144,7 @@ defmodule Type.Inference.Block.Parser do
     rollback(state, new_histories)
   end
 
-  ###############################################################
+  ################### =############################################
   ## TOOLS
 
   defp advance(state, new_histories) do

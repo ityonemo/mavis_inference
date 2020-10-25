@@ -14,7 +14,8 @@ defmodule TypeTest.Opcode.MoveTest do
     @opcode_reg {:move, {:x, 0}, {:x, 1}}
     test "forwards the value in the `from` register" do
       state = Parser.new([@opcode_reg],
-        __MODULE__, %{0 => builtin(:integer)})
+                         [module: __MODULE__],
+                         %{0 => builtin(:integer)})
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -24,8 +25,8 @@ defmodule TypeTest.Opcode.MoveTest do
       ] = history
     end
 
-    test "backpropagates to require a value in the from 0" do
-      state = Parser.new([@opcode_reg], __MODULE__)
+    test "backpropagates to require a value in register 0" do
+      state = Parser.new([@opcode_reg], module: __MODULE__)
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -37,7 +38,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
     test "backpropagates a previously seen value" do
       propagated = [@opcode_reg]
-      |> Parser.new(__MODULE__)
+      |> Parser.new(module: __MODULE__)
       |> Parser.do_forward
 
       [[last | rest]] = propagated.histories
@@ -56,7 +57,7 @@ defmodule TypeTest.Opcode.MoveTest do
     @opcode_reg {:move, {:x, 0}, {:x, 1}}
     test "forwards the value in the `from` register" do
       state = Parser.new([@opcode_reg],
-        __MODULE__, %{0 => builtin(:integer)})
+        [module: __MODULE__], %{0 => builtin(:integer)})
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -66,8 +67,8 @@ defmodule TypeTest.Opcode.MoveTest do
       ] = history
     end
 
-    test "backpropagates to require a value in the from 0" do
-      state = Parser.new([@opcode_reg], __MODULE__)
+    test "backpropagates to require a value in register 0" do
+      state = Parser.new([@opcode_reg], module: __MODULE__)
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -79,7 +80,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
     test "backpropagates a previously seen value" do
       propagated = [@opcode_reg]
-      |> Parser.new(__MODULE__)
+      |> Parser.new(module: __MODULE__)
       |> Parser.do_forward
 
       [[last | rest]] = propagated.histories
@@ -102,7 +103,7 @@ defmodule TypeTest.Opcode.MoveTest do
   describe "when the source is a literal integer" do
     @opcode_int {:move, {:integer, 47}, {:x, 1}}
     test "forwards the source value" do
-      state = Parser.new([@opcode_int], __MODULE__)
+      state = Parser.new([@opcode_int], module: __MODULE__)
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -111,7 +112,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
     test "backpropagation is ok, if the values match" do
       propagated = [@opcode_int]
-      |> Parser.new(__MODULE__)
+      |> Parser.new(module: __MODULE__)
       |> Parser.do_forward
 
       [[last | rest]] = propagated.histories
@@ -133,7 +134,7 @@ defmodule TypeTest.Opcode.MoveTest do
     @opcode_atom {:move, {:atom, :foo}, {:x, 1}}
 
     test "forwards the source value" do
-      state = Parser.new([@opcode_atom], __MODULE__)
+      state = Parser.new([@opcode_atom], module: __MODULE__)
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -142,7 +143,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
     test "backpropagation is ok, if the values match" do
       propagated = [@opcode_atom]
-      |> Parser.new(__MODULE__)
+      |> Parser.new(module: __MODULE__)
       |> Parser.do_forward
 
       [[last | rest]] = propagated.histories
@@ -165,7 +166,7 @@ defmodule TypeTest.Opcode.MoveTest do
     @string remote(String.t)
 
     test "forwards the source value" do
-      state = Parser.new([@opcode_string], __MODULE__)
+      state = Parser.new([@opcode_string], module: __MODULE__)
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -174,7 +175,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
     test "backpropagation is ok, if the values match" do
       propagated = [@opcode_string]
-      |> Parser.new(__MODULE__)
+      |> Parser.new(module: __MODULE__)
       |> Parser.do_forward
 
       [[last | rest]] = propagated.histories
@@ -198,7 +199,7 @@ defmodule TypeTest.Opcode.MoveTest do
     @string remote(String.t)
 
     test "forwards the source value" do
-      state = Parser.new([@opcode_emptylist], __MODULE__)
+      state = Parser.new([@opcode_emptylist], module: __MODULE__)
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -207,7 +208,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
     test "backpropagation is ok, if the values match" do
       propagated = [@opcode_emptylist]
-      |> Parser.new(__MODULE__)
+      |> Parser.new(module: __MODULE__)
       |> Parser.do_forward
 
       [[last | rest]] = propagated.histories

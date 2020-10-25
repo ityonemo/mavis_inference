@@ -50,7 +50,7 @@ defmodule Type.Inference.Module.ParallelParser do
     init = receive do {:init, init} -> init end
 
     # DO SOMETHING WITH CODE
-    block_lookup = Block.parse(code, init.module)
+    block_lookup = Block.parse(code, module: init.module, fa: {fun, arity})
 
     [init.parent | Map.values(init.parsers)]
     |> Enum.map(&send_lookup(&1, label, fun, arity, block_lookup))

@@ -27,7 +27,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "clobbers the value in register 0" do
-      state = Parser.new([@opcode_0], __MODULE__, %{0 => builtin(:integer)})
+      state = Parser.new([@opcode_0], [module: __MODULE__], %{0 => builtin(:integer)})
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -52,7 +52,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "forwards the value in register 0" do
-      state = Parser.new([@opcode_1], __MODULE__, %{0 => builtin(:integer)})
+      state = Parser.new([@opcode_1], [module: __MODULE__], %{0 => builtin(:integer)})
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -63,7 +63,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "backpropagates to require a value in register 0" do
-      state = Parser.new([@opcode_1], __MODULE__)
+      state = Parser.new([@opcode_1], module: __MODULE__)
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -88,7 +88,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "forwards the value in register 0" do
-      state = Parser.new([@opcode_2], __MODULE__, %{0 => builtin(:integer), 1 => builtin(:integer)})
+      state = Parser.new([@opcode_2], [module: __MODULE__], %{0 => builtin(:integer), 1 => builtin(:integer)})
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -100,7 +100,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     end
 
     test "backpropagates to require a value in register 0" do
-      state = Parser.new([@opcode_2], __MODULE__)
+      state = Parser.new([@opcode_2], module: __MODULE__)
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
