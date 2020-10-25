@@ -94,8 +94,21 @@ defmodule Type.Inference.Block.Parser do
   def do_analyze(state = %{code: []}, _), do: state
   def do_analyze(state, module) do
     state
+    |> debug_print
     |> do_forward(module)
     |> do_analyze(module)
+  end
+
+  if Mix.env != :prod do
+    defp debug_print(state = %{meta: meta}) do
+      if meta[:fa] == Process.get(:fa) do
+        state |> IO.inspect(label: "105")
+      else
+        state
+      end
+    end
+  else
+    defp debug_print(x), do: x
   end
 
   # TODO: make check invariants on do_forward
