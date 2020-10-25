@@ -50,28 +50,22 @@ defmodule Type.Inference.Opcodes do
       end
     end
 
-    backprop(_state, ...) do
-      raise "unimplemented"
-    end
+    backprop :unimplemented
   end
 
   # TODO: make this not be as crazy
   @number Type.union(builtin(:float), builtin(:integer))
 
-  opcode {:gc_bif, :+, {:f, to}, 2, [x: left, x: right], _} do
+  opcode {:gc_bif, :+, _, 2, [x: _left, x: _right], {:x, to}} do
     forward(state, ...) do
-      {:ok, put_reg(state, 0, @number)}
+      {:ok, put_reg(state, to, @number)}
     end
     backprop :terminal
   end
 
-  opcode {:select_val, {:x, from}, {:f, _fail}, {:list, list}} do
-    :unimplemented
-  end
+  opcode {:select_val, {:x, _from}, {:f, _fail}, {:list, _list}}, :unimplemented
 
-  opcode {:call_ext_only, _arity, {:extfunc, mod, fun, abcd}} do
-    :unimplemented
-  end
+  opcode {:call_ext_only, _arity, {:extfunc, _mod, _fun, _params}}, :unimplemented
 
   opcode {:make_fun2, {module, fun, arity}, _, _, _} do
     # best guess:
@@ -84,9 +78,7 @@ defmodule Type.Inference.Opcodes do
       {:ok, put_reg(state, 0, return)}
     end
 
-    forward(_, ...) do
-      raise "unimplemented"
-    end
+    forward :unimplemented
   end
 
   opcode :return do
@@ -96,15 +88,17 @@ defmodule Type.Inference.Opcodes do
     forward(state = %{xreg: %{}}, ...) do
       {:backprop, [put_reg(state, 0, builtin(:any))]}
     end
+
     backprop :terminal
   end
 
-  opcode {:line, _}
+  opcode {:line, _}, :noop
 
   opcode {:func_info, _, _, _} do
     forward(state, ...) do
       {:ok, put_reg(state, 0, builtin(:none))}
     end
+
     backprop :terminal
   end
 
