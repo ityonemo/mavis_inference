@@ -41,7 +41,6 @@ defmodule Type.Inference do
          {:ok, mod_struct} <- Type.Inference.Module.from_binary(binary),
          %{^fa => label} <- mod_struct.entry_points,
          %{^label => types} <- mod_struct.block_lookup do
-      Type.Inference.Module.code(mod_struct, fun, arity) |> IO.inspect(label: "44")
       {:ok, Type.Inference.Block.to_function(types)}
     else
       _ -> :unknown

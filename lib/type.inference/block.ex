@@ -7,7 +7,7 @@ defmodule Type.Inference.Block do
     makes: Type.t
   }]
 
-  defdelegate parse(code, module), to: Type.Inference.Block.Parser
+  defdelegate parse(code, metadata \\ []), to: Type.Inference.Block.Parser
 
   import Type
 
@@ -72,7 +72,7 @@ defmodule Type.Inference.Block.Parser do
   def new(code, meta, regs) do
     %__MODULE__{
       code: code,
-      meta: meta,
+      meta: Map.put(meta, :length, length(code)),
       histories: [[%Vm{module: meta.module, xreg: regs}]]}
   end
 
@@ -94,21 +94,8 @@ defmodule Type.Inference.Block.Parser do
   def do_analyze(state = %{code: []}, _), do: state
   def do_analyze(state, module) do
     state
-    |> debug_print
     |> do_forward(module)
     |> do_analyze(module)
-  end
-
-  if Mix.env != :prod do
-    defp debug_print(state = %{meta: meta}) do
-      if meta[:fa] == Process.get(:fa) do
-        state |> IO.inspect(label: "105")
-      else
-        state
-      end
-    end
-  else
-    defp debug_print(x), do: x
   end
 
   # TODO: make check invariants on do_forward
@@ -157,10 +144,13 @@ defmodule Type.Inference.Block.Parser do
           Enum.map(new_starting_points, &[&1 | earlier])
       end
     end)
-    rollback(state, new_histories)
+    # continue to backprop until we run out of stack.
+    state
+    |> rollback(new_histories)
+    |> do_backprop(opcode_module)
   end
 
-  ################### =############################################
+  ###############################################################
   ## TOOLS
 
   defp advance(state, new_histories) do

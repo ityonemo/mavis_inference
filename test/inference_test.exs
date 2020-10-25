@@ -27,8 +27,9 @@ defmodule TypeTest.InferenceTest do
     end
 
     test "a lambda with a backpropagating function" do
+      Application.put_env(:mavis_inference, :fa, {:with_bitsize, 1})
       assert FunctionProperties.has_opcode?({TypeTest.LambdaExamples, :with_bitsize, 1}, [:gc_bif, :bit_size])
-      assert %Type.Function{params: [%Type.Bitstring{size: 0, unit: 1}], return: builtin(:non_neg_integer)} == Type.of(&TypeTest.LambdaExamples.with_bitsize/1)
+      assert %Type.Function{params: [%Type.Bitstring{size: 0, unit: 1}], return: builtin(:non_neg_integer)} = Type.of(&TypeTest.LambdaExamples.with_bitsize/1)
     end
 
     test "a lambda with a function with forking code" do

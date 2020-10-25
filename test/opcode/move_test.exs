@@ -92,8 +92,12 @@ defmodule TypeTest.Opcode.MoveTest do
       assert [%Vm{xreg: %{0 => builtin(:any)}}] = rest
 
       # check to see do_backprop this rewrites history.
-      assert %{histories: [[%Vm{xreg: %{0 => builtin(:integer)}}]]} =
-        Parser.do_backprop(end_state)
+      assert %{histories: [history]} = Parser.do_backprop(end_state)
+
+      assert [
+        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}},
+        %Vm{xreg: %{0 => builtin(:integer)}}
+      ] = history
     end
   end
 
