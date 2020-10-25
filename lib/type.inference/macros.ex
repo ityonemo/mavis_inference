@@ -54,7 +54,7 @@ defmodule Type.Inference.Macros do
   defmacro forward(mode) when mode in [:noop, :unimplemented] do
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
-    |> assemble_noop(:forward, warn: [mode == :unimplemented])
+    |> assemble_noop(:forward, warn: (mode == :unimplemented))
     |> Macro.escape
     |> stash(:forward)
   end
@@ -71,7 +71,7 @@ defmodule Type.Inference.Macros do
   defmacro backprop(mode) when mode in [:noop, :unimplemented] do
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
-    |> assemble_noop(:backprop, warn: [mode == :unimplemented])
+    |> assemble_noop(:backprop, warn: (mode == :unimplemented))
     |> Macro.escape
     |> stash(:backprop)
   end
