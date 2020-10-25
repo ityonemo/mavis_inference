@@ -98,8 +98,6 @@ defmodule Type.Inference.Block.Parser do
     |> do_analyze(module)
   end
 
-  # TODO: make check invariants on do_forward
-
   def do_forward(state, opcode_module \\ Type.Inference.Opcodes)
   def do_forward(state = %{code: [instr | _]}, opcode_module) do
     # apply the forward operation on the shard.
