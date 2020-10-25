@@ -50,7 +50,7 @@ defmodule Type.Inference.Opcodes do
       end
     end
 
-    backprop(state, ...) do
+    backprop(_state, ...) do
       raise "unimplemented"
     end
   end

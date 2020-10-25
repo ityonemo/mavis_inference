@@ -50,11 +50,21 @@ defmodule Type.Inference.Macros do
 
         {fwd_ast, reg_ast, {:ok, [@blank]}, @blank}
       :unimplemented ->
-        {{:ok, @blank}, @blank, {:ok, [@blank]}, @blank}
+        {unimp_warn(op_ast), @blank, {:ok, [@blank]}, @blank}
     end
 
     rebuild_functions(List.wrap(bck_asts), List.wrap(breg_asts), op_ast, :backprop) ++
     rebuild_functions(List.wrap(fwd_asts), List.wrap(freg_asts), op_ast, :forward)
+  end
+
+  defp unimp_warn(op_ast) do
+    msg = "the opcode #{inspect op_ast} is not implemented yet."
+    {:__block__, [], [
+      quote do
+        IO.warn(unquote(msg))
+      end,
+      {:ok, @blank}
+    ]}
   end
 
   defp terminal_ast(op_ast) do
