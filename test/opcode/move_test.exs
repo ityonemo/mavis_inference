@@ -197,7 +197,6 @@ defmodule TypeTest.Opcode.MoveTest do
 
     # empty list is represented as nil!!
     @opcode_emptylist {:move, nil, {:x, 1}}
-    @string remote(String.t)
 
     test "forwards the source value" do
       state = Parser.new([@opcode_emptylist])
