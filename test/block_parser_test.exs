@@ -1,7 +1,7 @@
 defmodule TypeTest.BlockParserTest do
   use ExUnit.Case, async: true
 
-  alias Type.Inference.{Block, Vm}
+  alias Type.Inference.Block
 
   import Type
 

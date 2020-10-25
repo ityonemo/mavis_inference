@@ -53,7 +53,7 @@ defmodule Type.Inference.Macros do
 
   defmacro forward(mode) when mode in [:noop, :unimplemented] do
     __CALLER__.module
-    |> Module.get_attribute(:current_opcode) |> IO.inspect(label: "64")
+    |> Module.get_attribute(:current_opcode)
     |> assemble_noop(:forward, warn: [mode == :unimplemented])
     |> Macro.escape
     |> stash(:forward)
@@ -112,7 +112,7 @@ defmodule Type.Inference.Macros do
 
     {:def, [context: Elixir, import: Kernel],
     [
-      {symbol, [context: Elixir], [{:_, [], Elixir}, {:state, [], Elixir}]},
+      {symbol, [context: Elixir], [opcode_ast, {:state, [], Elixir}]},
       [do: {:__block__, [], [warning, ok_state]}]
     ]}
   end
@@ -132,105 +132,7 @@ defmodule Type.Inference.Macros do
     ]}
   end
 
-
-#  defp unimp_warn(op_ast) do
-#    msg = "the opcode #{inspect op_ast} is not implemented yet."
-#    {:__block__, [], [
-#      quote do
-#        IO.warn(unquote(msg))
-#      end,
-#      {:ok, @blank}
-#    ]}
-#  end
-#
-#  defp terminal_ast(op_ast) do
-#    message = "opcode #{inspect op_ast} is supposed to be terminal"
-#    quote do
-#      raise unquote(message)
-#    end
-#  end
-#
-#  defp rebuild_functions(code_asts, reg_asts, op_ast, mode) do
-#    code_asts
-#    |> Enum.zip(reg_asts)
-#    |> Enum.map(fn {code_ast, reg_ast} ->
-#      rebuild_function(code_ast, reg_ast, op_ast, mode)
-#    end)
-#  end
-#
-#  defp rebuild_function(code_ast, reg_ast, op_ast, mode) do
-#    # to prevent compiler warnings that can happen if only some of
-#    # the variables are used
-#    free_vars = scan_free_vars(op_ast)
-#
-#    suppressed_header = free_vars -- scan_free_vars(code_ast)
-#
-#    fwd_op = suppress(op_ast, suppressed_header)
-#
-#    func = quote do
-#      def unquote(mode)(unquote(fwd_op), unquote(reg_ast)) do
-#        unquote(code_ast)
-#      end
-#    end
-#
-#    {:@, [context: Elixir, import: Kernel], [{mode, [context: Elixir], [Macro.escape(func)]}]}
-#  end
-#
-#
-#  def unzip(list_of_tuples) do
-#    {ra, rb} = list_of_tuples
-#    |> Enum.reduce({[], []}, fn {sa, sb}, {da, db} ->
-#      {[sa | da], [sb | db]}
-#    end)
-#    {Enum.reverse(ra), Enum.reverse(rb)}
-#  end
-#
-#  ################################################################
-#  ## DSL tools
-#
-#  @var_endings [nil, Elixir]
-#
-#  defp scan_free_vars({ast, _, params}) when is_list(params) do
-#    scan_free_vars(ast) ++ Enum.flat_map(params, &scan_free_vars/1)
-#  end
-#  defp scan_free_vars({a, _, b}) when is_atom(a) and b in @var_endings do
-#    case Atom.to_string(a) do
-#      "_" <> _ -> []
-#      _ -> [a]
-#    end
-#  end
-#  defp scan_free_vars({a, b}) do
-#    scan_free_vars(a) ++ scan_free_vars(b)
-#  end
-#  defp scan_free_vars(lst) when is_list(lst) do
-#    Enum.flat_map(lst, &scan_free_vars/1)
-#  end
-#  defp scan_free_vars(atom) when is_atom(atom), do: []
-#  defp scan_free_vars(number) when is_number(number), do: []
-#  defp scan_free_vars(binary) when is_binary(binary), do: []
-#
-#  defp suppress(ast, []), do: ast
-#  defp suppress({ast, meta, params}, deadlist) when is_list(params) do
-#    {suppress(ast, deadlist), meta, Enum.map(params, &suppress(&1, deadlist))}
-#  end
-#  defp suppress({a, b}, deadlist) do
-#    {suppress(a, deadlist), suppress(b, deadlist)}
-#  end
-#  defp suppress({a, meta, b}, deadlist) when is_atom(a) and b in @var_endings do
-#    if a in deadlist do
-#      silenced_a = String.to_atom("_#{a}")
-#      {silenced_a, meta, b}
-#    else
-#      {a, meta, b}
-#    end
-#  end
-#  defp suppress(list, deadlist) when is_list(list) do
-#    Enum.map(list, &suppress(&1, deadlist))
-#  end
-#  defp suppress(any, _), do: any
-
   # exports
-
   def put_reg(state, reg, type) do
     %{state | xreg: Map.put(state.xreg, reg, type)}
   end

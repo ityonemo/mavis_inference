@@ -63,9 +63,11 @@ defmodule Type.Inference.Opcodes do
     backprop :terminal
   end
 
-  opcode {:select_val, {:x, _from}, {:f, _fail}, {:list, _list}}, :unimplemented
+  opcode {:select_val, {:x, _from}, {:f, _fail}, {:list, _list}}, :noop
+  #opcode {:select_val, {:x, _from}, {:f, _fail}, {:list, _list}}, :unimplemented
 
-  opcode {:call_ext_only, _arity, {:extfunc, _mod, _fun, _params}}, :unimplemented
+  opcode {:call_ext_only, _arity, {:extfunc, _mod, _fun, _params}}, :noop
+  #opcode {:call_ext_only, _arity, {:extfunc, _mod, _fun, _params}}, :unimplemented
 
   opcode {:make_fun2, {module, fun, arity}, _, _, _} do
     # best guess:
