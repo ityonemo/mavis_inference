@@ -128,17 +128,4 @@ defmodule Type.Inference.Opcodes do
 
     backprop :terminal
   end
-
-  defp put_reg(state, reg, type) do
-    %{state | xreg: Map.put(state.xreg, reg, type)}
-  end
-  defp get_reg(state, reg) do
-    state.xreg[reg]
-  end
-  defp merge_reg(state, registers) do
-    %{state | xreg: Map.merge(state.xreg, registers)}
-  end
-  defp tombstone(state, register) do
-    %{state | xreg: Map.delete(state.xreg, register)}
-  end
 end

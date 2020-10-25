@@ -3,7 +3,8 @@ defmodule Type.Inference.Macros do
     quote do
       @behaviour Type.Engine.Api
 
-      import Type.Inference.Macros, only: [opcode: 1, opcode: 2]
+      import Type.Inference.Macros, only: [
+        opcode: 1, opcode: 2, put_reg: 3, get_reg: 2, merge_reg: 2, tombstone: 2]
 
       Module.register_attribute(__MODULE__, :forward, accumulate: true)
       Module.register_attribute(__MODULE__, :backprop, accumulate: true)
@@ -46,7 +47,7 @@ defmodule Type.Inference.Macros do
         {breg_asts, bck_asts} = unzip(List.wrap(funs[:backprop]))
 
         {fwd_asts, freg_asts, bck_asts, breg_asts}
-      {:forward, _, [reg_ast, [do: fwd_ast]]} ->
+      {:forward, _, [reg_ast, {:..., _, _}, [do: fwd_ast]]} ->
 
         {fwd_ast, reg_ast, {:ok, [@blank]}, @blank}
       :unimplemented ->
@@ -165,5 +166,20 @@ defmodule Type.Inference.Macros do
     Enum.map(list, &suppress(&1, deadlist))
   end
   defp suppress(any, _), do: any
+
+  # exports
+
+  def put_reg(state, reg, type) do
+    %{state | xreg: Map.put(state.xreg, reg, type)}
+  end
+  def get_reg(state, reg) do
+    state.xreg[reg]
+  end
+  def merge_reg(state, registers) do
+    %{state | xreg: Map.merge(state.xreg, registers)}
+  end
+  def tombstone(state, register) do
+    %{state | xreg: Map.delete(state.xreg, register)}
+  end
 
 end
