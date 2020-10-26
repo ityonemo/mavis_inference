@@ -40,7 +40,7 @@ defmodule Type.Inference.Opcodes do
   opcode {:gc_bif, :bit_size, _, _, [x: from], {:x, to}} do
     forward(state, ...) do
       if is_map_key(state.xreg, from) do
-        {:ok, put_reg(state, 0, builtin(:non_neg_integer))}
+        {:ok, put_reg(state, to, builtin(:non_neg_integer))}
       else
         prev_state = state
         |> tombstone(to)
@@ -51,7 +51,7 @@ defmodule Type.Inference.Opcodes do
     end
 
     backprop(state, ...) do
-      if get_reg(state, to) == builtin(:pos_integer) do
+      if Type.subtype?(get_reg(state, to), builtin(:non_neg_integer)) do
         {:ok, [put_reg(state, from, %Type.Bitstring{size: 0, unit: 1})]}
       else
         {:ok, []}
@@ -62,19 +62,25 @@ defmodule Type.Inference.Opcodes do
   # TODO: make this not be as crazy
   @int_types [builtin(:pos_integer), 0, builtin(:neg_integer)]
   @num_types [builtin(:float), builtin(:integer)]
-  @add_result %{
-    {builtin(:pos_integer), builtin(:pos_integer)} => builtin(:pos_integer),
-    {builtin(:pos_integer), 0}                     => builtin(:pos_integer),
-    {builtin(:pos_integer), builtin(:neg_integer)} => builtin(:integer),
-    {0,                     builtin(:pos_integer)} => builtin(:pos_integer),
-    {0,                     0}                     => 0,
-    {0,                     builtin(:neg_integer)} => builtin(:neg_integer),
-    {builtin(:neg_integer), builtin(:pos_integer)} => builtin(:integer),
-    {builtin(:neg_integer), 0}                     => builtin(:neg_integer),
-    {builtin(:neg_integer), builtin(:neg_integer)} => builtin(:neg_integer),
-    {builtin(:integer),     builtin(:float)}       => builtin(:float),
-    {builtin(:float),       builtin(:integer)}     => builtin(:float),
-    {builtin(:float),       builtin(:float)}       => builtin(:float)}
+  @all_int_types [builtin(:integer), builtin(:non_neg_integer) | @int_types]
+
+  # there is probably a better way to do this.
+  defp do_add(0,                     any),                           do: any
+  defp do_add(any,                   0),                             do: any
+  defp do_add(builtin(:non_neg_integer), builtin(:non_neg_integer)), do: builtin(:non_neg_integer)
+  defp do_add(builtin(:non_neg_integer), builtin(:pos_integer)),     do: builtin(:pos_integer)
+  defp do_add(builtin(:non_neg_integer), builtin(:neg_integer)),     do: builtin(:integer)
+  defp do_add(builtin(:pos_integer),     builtin(:non_neg_integer)), do: builtin(:pos_integer)
+  defp do_add(builtin(:pos_integer),     builtin(:pos_integer)),     do: builtin(:pos_integer)
+  defp do_add(builtin(:pos_integer),     builtin(:neg_integer)),     do: builtin(:integer)
+  defp do_add(builtin(:neg_integer),     builtin(:non_neg_integer)), do: builtin(:integer)
+  defp do_add(builtin(:neg_integer),     builtin(:pos_integer)),     do: builtin(:integer)
+  defp do_add(builtin(:neg_integer),     builtin(:neg_integer)),     do: builtin(:neg_integer)
+  defp do_add(builtin(:integer),         builtin(:integer)),         do: builtin(:integer)
+  defp do_add(_,                         builtin(:float)),           do: builtin(:float)
+  defp do_add(builtin(:float),           _),                         do: builtin(:float)
+  defp do_add(t, builtin(:integer)) when t in @all_int_types,        do: builtin(:integer)
+  defp do_add(builtin(:integer), t) when t in @all_int_types,        do: builtin(:integer)
 
   opcode {:gc_bif, :+, _, 2, [x: left, x: right], {:x, to}} do
     forward(state, ...) do
@@ -91,7 +97,7 @@ defmodule Type.Inference.Opcodes do
         true ->
           ltype = get_reg(state, left)
           rtype = get_reg(state, right)
-          res = @add_result[{ltype, rtype}]
+          res = do_add(ltype, rtype)
           {:ok, put_reg(state, to, res)}
       end
     end
