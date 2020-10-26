@@ -37,7 +37,7 @@ defmodule Type.Inference.Opcodes do
   defp type_of(nil), do: []
   defp type_of({_, value}), do: Type.of(value)
 
-  opcode {:gc_bif, :bit_size, _, 1, [x: from], {:x, to}} do
+  opcode {:gc_bif, :bit_size, _, _, [x: from], {:x, to}} do
     forward(state, ...) do
       if is_map_key(state.xreg, from) do
         {:ok, put_reg(state, 0, builtin(:non_neg_integer))}
@@ -50,7 +50,13 @@ defmodule Type.Inference.Opcodes do
       end
     end
 
-    backprop :unimplemented
+    backprop(state, ...) do
+      if get_reg(state, to) == builtin(:pos_integer) do
+        {:ok, [put_reg(state, from, %Type.Bitstring{size: 0, unit: 1})]}
+      else
+        {:ok, []}
+      end
+    end
   end
 
   # TODO: make this not be as crazy

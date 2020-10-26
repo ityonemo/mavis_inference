@@ -10,8 +10,6 @@ defmodule TypeTest.Abstract.OpcodeTest do
   import Type
 
   describe "a splitting opcode" do
-    @op_split :splitting
-
     opcode :splitting do
 
       # checks register 0 and if it's empty, splits it into either
@@ -29,7 +27,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
     end
 
     test "causes splits" do
-      state = Parser.new([@op_split], preload: %{})
+      state = Parser.new([:splitting])
 
       assert %Parser{histories: histories} = Parser.do_forward(state, __MODULE__)
 
@@ -38,6 +36,76 @@ defmodule TypeTest.Abstract.OpcodeTest do
               [%Vm{xreg: %{0 => builtin(:atom)}},
                %Vm{xreg: %{0 => builtin(:atom)}}]] = histories
     end
+  end
+
+  describe "pairs of opcodes" do
+
+    opcode :combiner do
+      forward(state, ...) do
+        cond do
+          not is_map_key(state.xreg, 0) ->
+            {:backprop, [put_reg(state, 0, :foo), put_reg(state, 0, :bar)]}
+          not is_map_key(state.xreg, 1) ->
+            {:backprop, [put_reg(state, 1, :foo), put_reg(state, 1, :bar)]}
+          true ->
+            {:ok, state}
+        end
+      end
+    end
+
+    test "combiner alone explores the search space." do
+      state = Parser.new([:combiner])
+
+      assert %Parser{histories: histories} = Parser.do_forward(state, __MODULE__)
+
+      assert [[%Vm{xreg: %{0 => :foo, 1 => :foo}},
+               %Vm{xreg: %{0 => :foo, 1 => :foo}}],
+              [%Vm{xreg: %{0 => :foo, 1 => :bar}},
+               %Vm{xreg: %{0 => :foo, 1 => :bar}}],
+              [%Vm{xreg: %{0 => :bar, 1 => :foo}},
+               %Vm{xreg: %{0 => :bar, 1 => :foo}}],
+              [%Vm{xreg: %{0 => :bar, 1 => :bar}},
+               %Vm{xreg: %{0 => :bar, 1 => :bar}}]] = histories
+    end
+
+    opcode :filter do
+      forward(state, ...) do
+        cond do
+          not is_map_key(state.xreg, 0) ->
+            {:backprop, [put_reg(state, 0, :foo)]}
+          true ->
+            {:ok, state}
+        end
+      end
+
+      backprop(state, ...) do
+        if state.xreg[0] == :foo do
+          {:ok, [state]}
+        else
+          {:ok, []}
+        end
+      end
+    end
+
+    test "filter alone asserts the existence of foo." do
+      state = Parser.new([:filter])
+
+      assert %Parser{histories: histories} = Parser.do_forward(state, __MODULE__)
+
+      assert [[%Vm{xreg: %{0 => :foo}}, %Vm{xreg: %{0 => :foo}}]] = histories
+    end
+
+    test "combining the two" do
+      state = Parser.new([:filter, :combiner])
+
+      assert %Parser{histories: histories} = state
+      |> Parser.do_forward(__MODULE__)
+      |> Parser.do_forward(__MODULE__)
+
+      assert [[%Type.Inference.Vm{xreg: %{0 => :foo, 1 => :foo}} | _],
+             [%Type.Inference.Vm{xreg: %{0 => :foo, 1 => :bar}} | _]] = histories
+    end
+
   end
 
 end
