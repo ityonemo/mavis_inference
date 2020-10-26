@@ -54,12 +54,43 @@ defmodule Type.Inference.Opcodes do
   end
 
   # TODO: make this not be as crazy
-  @number Type.union(builtin(:float), builtin(:integer))
+  @int_types [builtin(:pos_integer), 0, builtin(:neg_integer)]
+  @num_types [builtin(:float), builtin(:integer)]
+  @add_result %{
+    {builtin(:pos_integer), builtin(:pos_integer)} => builtin(:pos_integer),
+    {builtin(:pos_integer), 0}                     => builtin(:pos_integer),
+    {builtin(:pos_integer), builtin(:neg_integer)} => builtin(:integer),
+    {0,                     builtin(:pos_integer)} => builtin(:pos_integer),
+    {0,                     0}                     => 0,
+    {0,                     builtin(:neg_integer)} => builtin(:neg_integer),
+    {builtin(:neg_integer), builtin(:pos_integer)} => builtin(:integer),
+    {builtin(:neg_integer), 0}                     => builtin(:neg_integer),
+    {builtin(:neg_integer), builtin(:neg_integer)} => builtin(:neg_integer),
+    {builtin(:integer),     builtin(:float)}       => builtin(:float),
+    {builtin(:float),       builtin(:integer)}     => builtin(:float),
+    {builtin(:float),       builtin(:float)}       => builtin(:float)}
 
-  opcode {:gc_bif, :+, _, 2, [x: _left, x: _right], {:x, to}} do
+  opcode {:gc_bif, :+, _, 2, [x: left, x: right], {:x, to}} do
     forward(state, ...) do
-      {:ok, put_reg(state, to, @number)}
+      cond do
+        # TODO: make this a guard.
+        not is_map_key(state.xreg, left) ->
+          {:backprop, Enum.map(@int_types ++ @num_types, &put_reg(state, left, &1))}
+        not is_map_key(state.xreg, right) and get_reg(state, left) in @int_types ->
+          {:backprop, Enum.map(@int_types, &put_reg(state, right, &1))}
+        not is_map_key(state.xreg, right) and get_reg(state, left) == builtin(:float) ->
+          {:backprop, [put_reg(state, right, builtin(:float)), put_reg(state, right, builtin(:integer))]}
+        not is_map_key(state.xreg, right) and get_reg(state, left) == builtin(:integer) ->
+          {:backprop, [put_reg(state, right, builtin(:float))]}
+        true ->
+          ltype = get_reg(state, left)
+          rtype = get_reg(state, right)
+          res = @add_result[{ltype, rtype}]
+          {:ok, put_reg(state, to, res)}
+      end
     end
+
+    # a temporary lie.
     backprop :terminal
   end
 
