@@ -39,6 +39,8 @@ end
 defmodule Type.Inference.Block.Parser do
   @enforce_keys [:code, :histories, :meta]
 
+  @type op_module :: [module] | module
+
   alias Type.Inference.{Vm, Module}
 
   defstruct @enforce_keys ++ [
@@ -98,6 +100,7 @@ defmodule Type.Inference.Block.Parser do
     Type.Inference.Opcodes.Move,
     Type.Inference.Opcodes.Terminal]
 
+  @spec do_analyze(t, op_module) :: t
   def do_analyze(state, opcode_modules \\ @default_opcode_modules)
   def do_analyze(state = %{code: []}, _), do: state
   def do_analyze(state, opcode_modules) do
@@ -106,6 +109,7 @@ defmodule Type.Inference.Block.Parser do
     |> do_analyze(opcode_modules)
   end
 
+  @spec do_forward(t, op_module) :: t
   def do_forward(state, opcode_modules \\ @default_opcode_modules)
   def do_forward(state = %{code: [instr | _]}, opcode_modules) do
     # apply the forward operation on the shard.
@@ -126,6 +130,7 @@ defmodule Type.Inference.Block.Parser do
     advance(state, new_histories)
   end
 
+  @spec reduce_forward(term, Vm.t, op_module) :: {:ok, Vm.t} | {:backprop, [Vm.t]} | :no_return
   defp reduce_forward(instr, latest, opcode_modules) do
     opcode_modules
     |> List.wrap
@@ -148,6 +153,7 @@ defmodule Type.Inference.Block.Parser do
     end)
   end
 
+  @spec do_backprop(t, op_module) :: t
   def do_backprop(state, opcode_modules \\ @default_opcode_modules)
   def do_backprop(state = %{stack: []}, opcode_modules) do
     # if we've run out of stack, then run the forward propagation
@@ -167,6 +173,7 @@ defmodule Type.Inference.Block.Parser do
     |> do_backprop(opcode_modules)
   end
 
+  @spec reduce_backprop(term, Vm.t, op_module) :: {:ok, [Vm.t]}
   defp reduce_backprop(opcode, latest, opcode_modules) do
     opcode_modules
     |> List.wrap
