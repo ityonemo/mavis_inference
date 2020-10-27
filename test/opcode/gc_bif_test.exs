@@ -79,9 +79,8 @@ defmodule TypeTest.Opcode.GcBifTest do
     test "a lambda with chained code" do
       state = Parser.new([@opcode_bitsz2, @opcode_add])
       state
-      |> Parser.do_forward |> IO.inspect(label: "82")
-      |> Parser.do_forward |> IO.inspect(label: "83")
-      |> IO.inspect(label: "84")
+      |> Parser.do_forward
+      |> Parser.do_forward
 
       flunk
     end

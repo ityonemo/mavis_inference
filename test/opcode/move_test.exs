@@ -164,7 +164,7 @@ defmodule TypeTest.Opcode.MoveTest do
   describe "when the source is a literal string" do
 
     @opcode_string {:move, {:literal, "foo"}, {:x, 1}}
-    @string remote(String.t)
+    @string remote(String.t(3))
 
     test "forwards the source value" do
       state = Parser.new([@opcode_string])

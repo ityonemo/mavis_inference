@@ -1,4 +1,4 @@
-defmodule Type.Inference.Opcodes do
+defmodule Type.Inference.Opcodes.MakeFun do
 
   import Type, only: :macros
 

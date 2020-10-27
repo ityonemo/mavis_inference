@@ -90,24 +90,35 @@ defmodule Type.Inference.Block.Parser do
       &%Block{needs: List.last(&1).xreg, makes: List.first(&1).xreg[0]})
   end
 
-  def do_analyze(state, module \\ Type.Inference.Opcodes)
+  @default_opcode_modules [
+    Type.Inference.Opcodes.Calls,
+    Type.Inference.Opcodes.GcBif,
+    Type.Inference.Opcodes.MakeFun,
+    Type.Inference.Opcodes.Misc,
+    Type.Inference.Opcodes.Move,
+    Type.Inference.Opcodes.Terminal]
+
+  def do_analyze(state, opcode_modules \\ @default_opcode_modules)
   def do_analyze(state = %{code: []}, _), do: state
-  def do_analyze(state, module) do
+  def do_analyze(state, opcode_modules) do
     state
-    |> do_forward(module)
-    |> do_analyze(module)
+    |> do_forward(opcode_modules)
+    |> do_analyze(opcode_modules)
   end
 
-  def do_forward(state, opcode_module \\ Type.Inference.Opcodes)
-  def do_forward(state = %{code: [instr | _]}, opcode_module) do
+  def do_forward(state, opcode_modules \\ @default_opcode_modules)
+  def do_forward(state = %{code: [instr | _]}, opcode_modules) do
     # apply the forward operation on the shard.
 
     new_histories = Enum.flat_map(state.histories,
       fn history = [latest | earlier] ->
-        case opcode_module.forward(instr, latest) do
+        case reduce_forward(instr, latest, opcode_modules) do
           {:ok, new_vm} -> [[new_vm | history]]
           {:backprop, replacement_vms} ->
-            do_all_backprop(state, replacement_vms, earlier, opcode_module)
+            do_all_backprop(state,
+                            replacement_vms,
+                            earlier,
+                            opcode_modules)
           :no_return -> []
         end
       end)
@@ -115,29 +126,37 @@ defmodule Type.Inference.Block.Parser do
     advance(state, new_histories)
   end
 
-  @spec do_all_backprop(t, [Vm.t], history, module) :: [history]
-  defp do_all_backprop(state, replacement_vms, history, opcode_module) do
+  defp reduce_forward(instr, latest, opcode_modules) do
+    opcode_modules
+    |> List.wrap
+    |> Enum.reduce(:unknown, fn
+      module, :unknown -> module.forward(instr, latest)
+      _, result -> result
+    end)
+  end
+
+  @spec do_all_backprop(t, [Vm.t], history, [module]) :: [history]
+  defp do_all_backprop(state, replacement_vms, history, opcode_modules) do
     Enum.flat_map(replacement_vms, fn vm ->
       # cut off all unprocessed code so we can return here.
       %{state |
-        code: [hd(state.code)],
-        stack: state.stack,
-        histories: [[vm | history]]
-      }
-      |> do_backprop(opcode_module)
+          code: [hd(state.code)],
+          stack: state.stack,
+          histories: [[vm | history]]}
+      |> do_backprop(opcode_modules)
       |> Map.get(:histories)
     end)
   end
 
-  def do_backprop(state, module \\ Type.Inference.Opcodes)
-  def do_backprop(state = %{stack: []}, opcode_module) do
+  def do_backprop(state, opcode_modules \\ @default_opcode_modules)
+  def do_backprop(state = %{stack: []}, opcode_modules) do
     # if we've run out of stack, then run the forward propagation
-    do_analyze(state, opcode_module)
+    do_analyze(state, opcode_modules)
   end
-  def do_backprop(state = %{stack: [opcode | _]}, opcode_module) do
+  def do_backprop(state = %{stack: [opcode | _]}, opcode_modules) do
     new_histories = state.histories
     |> Enum.flat_map(fn [latest, _to_replace | earlier] ->
-      case opcode_module.backprop(opcode, latest) do
+      case reduce_backprop(opcode, latest, opcode_modules) do
         {:ok, new_starting_points} ->
           Enum.map(new_starting_points, &[&1 | earlier])
       end
@@ -145,7 +164,17 @@ defmodule Type.Inference.Block.Parser do
     # continue to backprop until we run out of stack.
     state
     |> rollback(new_histories)
-    |> do_backprop(opcode_module)
+    |> do_backprop(opcode_modules)
+  end
+
+  defp reduce_backprop(opcode, latest, opcode_modules) do
+    opcode_modules
+    |> List.wrap
+    |> Enum.reduce(:unknown, fn
+      module, :unknown ->
+        module.backprop(opcode, latest)
+      _, result -> result
+    end)
   end
 
   ###############################################################

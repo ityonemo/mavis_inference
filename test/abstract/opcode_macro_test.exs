@@ -2,6 +2,28 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
   use ExUnit.Case, async: true
   import ExUnit.CaptureIO
 
+  @completely_empty_opcode_module """
+  defmodule TypeTest.EOM do
+    use Type.Inference.Macros
+  end
+  """
+
+  describe "a completely empty opcode module" do
+
+    setup do
+      Code.compile_string(@completely_empty_opcode_module)
+    end
+
+    test "can still be called with forward" do
+      assert :unknown == TypeTest.EOM.forward(:foo, %{})
+    end
+
+    test "can still be called with backprop" do
+      assert :unknown == TypeTest.EOM.forward(:foo, %{})
+    end
+  end
+
+
   # tests to make sure that compilation of opcode stuff with macros don't
   # cause warnings or errors.
 
@@ -28,7 +50,6 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
 
     refute warnings =~ "is unused"
   end
-
 
   @unused_term_fwd_match_check """
   defmodule TypeTest.MTF2 do

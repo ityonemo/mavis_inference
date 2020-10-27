@@ -23,7 +23,8 @@ defmodule TypeTest.InferenceTest do
 
     test "a lambda that sets a value" do
       assert %Type.Function{params: [], return: 47} = Type.of(&TypeTest.LambdaExamples.forty_seven/0)
-      assert %Type.Function{params: [], return: remote(String.t)} = Type.of(&TypeTest.LambdaExamples.forty_seven_str/0)
+      assert %Type.Function{params: [], return: %Type{module: String, name: :t}} =
+        Type.of(&TypeTest.LambdaExamples.forty_seven_str/0)
     end
 
     test "a lambda with a backpropagating function" do

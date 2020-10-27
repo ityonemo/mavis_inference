@@ -19,13 +19,14 @@ defmodule Type.Inference.Macros do
     fwd = List.wrap(Module.get_attribute(caller, :forward))
     bck = List.wrap(Module.get_attribute(caller, :backprop))
 
-    last = quote do
-      def forward(op, _) do
-        raise Type.UnknownOpcodeError, opcode: op
-      end
+    last_fwd = quote do
+      def forward(_, _), do: :unknown
+    end
+    last_bck = quote do
+      def backprop(_, _), do: :unknown
     end
 
-    {:__block__, [], Enum.reverse(bck ++ [last | fwd])}
+    {:__block__, [], Enum.reverse([last_bck | bck] ++ [last_fwd | fwd])}
   end
 
 
