@@ -6,7 +6,6 @@ defmodule Type.Inference.Opcodes.Calls do
   alias Type.Inference.Module.ParallelParser
 
   # MOVE SEMANTICS
-
   @operands [:module, :exports, :attributes, :compile, :native, :md5]
 
   # THESE OPCODES ARE TEMPORARY.  Let's get just something working first.
@@ -43,7 +42,15 @@ defmodule Type.Inference.Opcodes.Calls do
     backprop :terminal
   end
 
-  opcode {:call_ext_only, _arity, {:extfunc, _mod, _fun, _arity}}, :unimplemented
+  opcode {:call_ext_only, _arity1, {:extfunc, _mod, _fun, _arity2}}, :unimplemented
+
+  #opcode {:call_ext_only, _arity, x = {:extfunc, _mod, _fun, _arity1}} do
+  #  forward(state, _meta, ...) do
+  #    x |> IO.inspect(label: "47")
+  #    raise "foo"
+  #  end
+  #  backprop :terminal
+  #end
 
   opcode {:call_only, _arity1, {_this_module, function, arity}} do
     forward(state, _meta, ...) do

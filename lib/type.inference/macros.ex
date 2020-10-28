@@ -1,5 +1,17 @@
 defmodule Type.Inference.Macros do
-  defmacro __using__(_) do
+
+  defp macro_inspect(code_ast, label \\ nil) do
+    prefix = if label, do: "\n#{label}: ", else: ""
+    IO.puts(prefix <> Macro.to_string(code_ast))
+    code_ast
+  end
+
+  defmacro __using__(opts) do
+
+    debug_dump_code = if opts[:debug_dump_code] do
+      quote do @debug_dump_code true end
+    end
+
     quote do
       @behaviour Type.Engine.Api
 
@@ -9,6 +21,8 @@ defmodule Type.Inference.Macros do
 
       Module.register_attribute(__MODULE__, :forward, accumulate: true)
       Module.register_attribute(__MODULE__, :backprop, accumulate: true)
+
+      unquote(debug_dump_code)
 
       @before_compile Type.Inference.Macros
     end
@@ -26,9 +40,14 @@ defmodule Type.Inference.Macros do
       def backprop(_, _, _), do: :unknown
     end
 
-    {:__block__, [], Enum.reverse([last_bck | bck] ++ [last_fwd | fwd])}
-  end
+    code = {:__block__, [], Enum.reverse([last_bck | bck] ++ [last_fwd | fwd])}
 
+    if Module.get_attribute(caller, :debug_dump_code) do
+      code |> macro_inspect
+    end
+
+    code
+  end
 
   ### KEY MACROS
 
@@ -37,10 +56,22 @@ defmodule Type.Inference.Macros do
     opcode_block_ast
   end
   defmacro opcode(opcode_ast, :unimplemented) do
-    empty_opcode(opcode_ast, warn: "the opcode #{Macro.to_string opcode_ast} is not implemented yet.")
+    a = assemble_noop(opcode_ast, :forward, warn: "the opcode #{Macro.to_string opcode_ast} is not implemented yet.")
+    b = assemble_noop(opcode_ast, :backprop)
+
+    quote do
+      @forward unquote(Macro.escape(a))
+      @backprop unquote(Macro.escape(b))
+    end
   end
   defmacro opcode(opcode_ast, :noop) do
-    empty_opcode(opcode_ast)
+    a = assemble_noop(opcode_ast, :forward)
+    b = assemble_noop(opcode_ast, :backprop)
+
+    quote do
+      @forward unquote(Macro.escape(a))
+      @backprop unquote(Macro.escape(b))
+    end
   end
 
   defmacro forward(state_param_ast, meta_ast, {:..., _, _}, do: code_ast) do
@@ -82,17 +113,6 @@ defmodule Type.Inference.Macros do
   end
   defmacro backprop(:terminal) do
     quote do end
-  end
-
-  defp empty_opcode(opcode_ast, opts \\ []) do
-
-    a = assemble_noop(opcode_ast, :forward)
-    b = assemble_noop(opcode_ast, :backprop, opts)
-
-    quote do
-      unquote(stash(a, :forward))
-      unquote(stash(b, :backprop))
-    end
   end
 
   defp make_warn(string) do quote do IO.warn(unquote(string)) end end

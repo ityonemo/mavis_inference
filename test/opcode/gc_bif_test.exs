@@ -77,13 +77,15 @@ defmodule TypeTest.Opcode.GcBifTest do
   describe "chained bif test" do
     @opcode_bitsz2 {:gc_bif, :bit_size, {:f, 0}, 1, [x: 1], {:x, 1}}
     test "a lambda with chained code" do
-      state = Parser.new([@opcode_bitsz2, @opcode_add])
-      state
+      state = [@opcode_bitsz2, @opcode_add]
+      |> Parser.new
       |> Parser.do_forward
       |> Parser.do_forward
-      |> IO.inspect(label: "84")
 
-      flunk
+      assert %{histories: [
+        [%{x: %{0 => builtin(:pos_integer)}}, _,
+         %{x: %{0 => builtin(:pos_integer), 1 => builtin(:bitstring)}}] | _
+      ]} = state
     end
   end
 end
