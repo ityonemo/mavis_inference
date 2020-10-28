@@ -1,13 +1,11 @@
 defmodule Type.Inference.Registers do
   @moduledoc """
-  struct which represents the virtual machine
+  struct which represents register tracking in the virtual machine
   """
 
-  @enforce_keys [:module]
   defstruct @enforce_keys ++ [x: %{}, y: %{}]
 
   @type t :: %__MODULE__{
-    module: module,
     x: %{integer => Type.t},
     y: %{integer => Type.t}
   }

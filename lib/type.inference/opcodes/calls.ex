@@ -44,14 +44,6 @@ defmodule Type.Inference.Opcodes.Calls do
 
   opcode {:call_ext_only, _arity1, {:extfunc, _mod, _fun, _arity2}}, :unimplemented
 
-  #opcode {:call_ext_only, _arity, x = {:extfunc, _mod, _fun, _arity1}} do
-  #  forward(state, _meta, ...) do
-  #    x |> IO.inspect(label: "47")
-  #    raise "foo"
-  #  end
-  #  backprop :terminal
-  #end
-
   opcode {:call_only, _arity1, {_this_module, function, arity}} do
     forward(state, _meta, ...) do
       # TODO: allow this to take alternate specs
