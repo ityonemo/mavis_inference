@@ -37,7 +37,7 @@ defmodule Type.Inference.Macros do
     opcode_block_ast
   end
   defmacro opcode(opcode_ast, :unimplemented) do
-    empty_opcode(opcode_ast, warn: true)
+    empty_opcode(opcode_ast, warn: "the opcode #{Macro.to_string opcode_ast} is not implemented yet.")
   end
   defmacro opcode(opcode_ast, :noop) do
     empty_opcode(opcode_ast)
@@ -85,25 +85,9 @@ defmodule Type.Inference.Macros do
   end
 
   defp empty_opcode(opcode_ast, opts \\ []) do
-    warning = if opts[:warn] do
-      opcode = Macro.to_string(opcode_ast)
-      quote do
-        IO.warn("the opcode #{unquote opcode} is not implemented yet.")
-      end
-    end
 
-    a = Macro.escape(quote do
-      def forward(unquote(opcode_ast), state, _meta) do
-        unquote(warning)
-        {:ok, state}
-      end
-    end)
-
-    b = Macro.escape(quote do
-      def backprop(unquote(opcode_ast), state, _meta) do
-        {:ok, [state]}
-      end
-    end)
+    a = assemble_noop(opcode_ast, :forward)
+    b = assemble_noop(opcode_ast, :backprop, opts)
 
     quote do
       unquote(stash(a, :forward))
@@ -111,12 +95,12 @@ defmodule Type.Inference.Macros do
     end
   end
 
+  defp make_warn(string) do quote do IO.warn(unquote(string)) end end
   defp assemble_noop(opcode_ast, symbol, opts \\ []) do
-    warning = if opts[:warn] do
-      opcode = Macro.to_string(opcode_ast)
-      quote do
-        IO.warn("the method #{unquote symbol} for opcode #{unquote opcode} is not implemented.")
-      end
+    warning = case opts[:warn] do
+      true -> make_warn("the method #{symbol} for opcode #{Macro.to_string opcode_ast} is not implemented.")
+      nil -> nil
+      _ -> make_warn(opts[:warn])
     end
 
     ok_state = case symbol do

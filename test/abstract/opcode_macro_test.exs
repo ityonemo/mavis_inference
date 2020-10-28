@@ -9,17 +9,18 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
   """
 
   setup_all do
-    Code.compile_string(@completely_empty_opcode_module)
+    [{module, _}] = Code.compile_string(@completely_empty_opcode_module)
+
+    {:ok, module: module}
   end
 
   describe "a completely empty opcode module" do
-
-    test "can still be called with forward" do
-      assert :unknown == TypeTest.EOM.forward(:foo, %{})
+    test "can still be called with forward", %{module: module} do
+      assert :unknown == module.forward(:foo, %{}, %{})
     end
 
-    test "can still be called with backprop" do
-      assert :unknown == TypeTest.EOM.forward(:foo, %{})
+    test "can still be called with backprop", %{module: module} do
+      assert :unknown == module.forward(:foo, %{}, %{})
     end
   end
 
@@ -32,10 +33,10 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
     use Type.Inference.Macros
 
     opcode {:fwd_no, a} do
-      forward(state, ...) do
+      forward(state, _meta, ...) do
         {:ok, state}
       end
-      backprop(state, ...) do
+      backprop(state, _meta, ...) do
         IO.puts(a)
         {:ok, [state]}
       end
