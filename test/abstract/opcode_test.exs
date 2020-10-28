@@ -15,7 +15,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
       # checks register 0 and if it's empty, splits it into either
       # integer -> integer
       # atom -> atom
-      forward(state, ...) do
+      forward(state, _meta, ...) do
         if state.x == %{} do
           {:backprop, [
             put_reg(state, 0, builtin(:integer)),
@@ -41,7 +41,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
   describe "pairs of opcodes" do
 
     opcode :combiner do
-      forward(state, ...) do
+      forward(state, _meta, ...) do
         cond do
           not is_map_key(state.x, 0) ->
             {:backprop, [put_reg(state, 0, :foo), put_reg(state, 0, :bar)]}
@@ -69,7 +69,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
     end
 
     opcode :filter do
-      forward(state, ...) do
+      forward(state, _meta, ...) do
         cond do
           not is_map_key(state.x, 0) ->
             {:backprop, [put_reg(state, 0, :foo)]}
@@ -78,7 +78,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
         end
       end
 
-      backprop(state, ...) do
+      backprop(state, _meta, ...) do
         if state.x[0] == :foo do
           {:ok, [state]}
         else

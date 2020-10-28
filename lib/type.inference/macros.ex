@@ -4,7 +4,7 @@ defmodule Type.Inference.Macros do
       @behaviour Type.Engine.Api
 
       import Type.Inference.Macros, only: [
-        opcode: 2, forward: 3, forward: 1, backprop: 3, backprop: 1,
+        opcode: 2, forward: 4, forward: 1, backprop: 4, backprop: 1,
         put_reg: 3, get_reg: 2, merge_reg: 2, tombstone: 2]
 
       Module.register_attribute(__MODULE__, :forward, accumulate: true)
@@ -48,7 +48,7 @@ defmodule Type.Inference.Macros do
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
     |> filter_params([state_param_ast, code_ast])
-    |> assemble(state_param_ast, code_ast, meta_ast, :forward)
+    |> assemble(state_param_ast, meta_ast, code_ast, :forward)
     |> Macro.escape
     |> stash(:forward)
   end
@@ -67,7 +67,7 @@ defmodule Type.Inference.Macros do
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
     |> filter_params([state_param_ast, code_ast])
-    |> assemble(state_param_ast, code_ast, meta_ast, :backprop)
+    |> assemble(state_param_ast, meta_ast, code_ast, :backprop)
     |> Macro.escape
     |> stash(:backprop)
   end

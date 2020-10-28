@@ -56,10 +56,10 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
     use Type.Inference.Macros
 
     opcode {:fwd_no, a} do
-      forward(state = %{foo: a}, ...) do
+      forward(state = %{foo: a}, _meta, ...) do
         {:ok, state}
       end
-      backprop(state, ...) do
+      backprop(state, _meta, ...) do
         IO.puts(a)
         {:ok, [state]}
       end
@@ -80,11 +80,11 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
     use Type.Inference.Macros
 
     opcode {:bck_no, a} do
-      forward(state, ...) do
+      forward(state, _meta, ...) do
         IO.puts(a)
         {:ok, state}
       end
-      backprop(state, ...) do
+      backprop(state, _meta, ...) do
         {:ok, [state]}
       end
     end
@@ -104,11 +104,11 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
     use Type.Inference.Macros
 
     opcode {:bck_no, a} do
-      forward(state, ...) do
+      forward(state, _meta, ...) do
         IO.puts(a)
         {:ok, state}
       end
-      backprop(state = %{foo: a}, ...) do
+      backprop(state = %{foo: a}, _meta, ...) do
         {:ok, [state]}
       end
     end
