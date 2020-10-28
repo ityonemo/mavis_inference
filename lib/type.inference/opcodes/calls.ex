@@ -11,7 +11,7 @@ defmodule Type.Inference.Opcodes.Calls do
 
   # THESE OPCODES ARE TEMPORARY.  Let's get just something working first.
   opcode {:call_ext_only, _arity, {:extfunc, :erlang, :get_module_info, 1}} do
-    forward(state, ...) do
+    forward(state, _meta, ...) do
       if is_map_key(state.x, 0) do
         {:ok, put_reg(state, 0, builtin(:keyword))}
       else
@@ -22,7 +22,7 @@ defmodule Type.Inference.Opcodes.Calls do
   end
 
   opcode {:call_ext_only, _arity, {:extfunc, :erlang, :get_module_info, 2}} do
-    forward(state, ...) do
+    forward(state, _meta, ...) do
       cond do
         not is_map_key(state.x, 0) ->
           {:backprop, [put_reg(state, 0, builtin(:module))]}
@@ -46,7 +46,7 @@ defmodule Type.Inference.Opcodes.Calls do
   opcode {:call_ext_only, _arity, {:extfunc, _mod, _fun, _arity}}, :unimplemented
 
   opcode {:call_only, _arity1, {_this_module, function, arity}} do
-    forward(state, ...) do
+    forward(state, _meta, ...) do
       # TODO: allow this to take alternate specs
       [lookup] = ParallelParser.obtain_call(function, arity)
 

@@ -18,14 +18,14 @@ defmodule Type.Inference.Registers do
     def inspect(%{x: x, y: y}, opts) do
       xreg = x
       |> Enum.map(fn {r, t} -> ["(x#{r}) ", to_doc(t, opts)] end)
-      |> Enum.intersperse([" | "])
+      |> Enum.intersperse([" : "])
       |> Enum.flat_map(&Function.identity/1)
       yreg = y
       |> Enum.map(fn {r, t} -> ["(y#{r}) ", to_doc(t, opts)] end)
-      |> Enum.intersperse([" | "])
+      |> Enum.intersperse([" : "])
       |> Enum.flat_map(&Function.identity/1)
 
-      concat(["| "] ++ xreg ++ yreg ++ [" |"])
+      concat(["#Reg<"] ++ xreg ++ yreg ++ [">"])
     end
   end
 end

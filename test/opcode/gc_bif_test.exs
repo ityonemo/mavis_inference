@@ -81,6 +81,7 @@ defmodule TypeTest.Opcode.GcBifTest do
       state
       |> Parser.do_forward
       |> Parser.do_forward
+      |> IO.inspect(label: "84")
 
       flunk
     end

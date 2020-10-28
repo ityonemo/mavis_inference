@@ -20,10 +20,10 @@ defmodule Type.Inference.Macros do
     bck = List.wrap(Module.get_attribute(caller, :backprop))
 
     last_fwd = quote do
-      def forward(_, _), do: :unknown
+      def forward(_, _, _), do: :unknown
     end
     last_bck = quote do
-      def backprop(_, _), do: :unknown
+      def backprop(_, _, _), do: :unknown
     end
 
     {:__block__, [], Enum.reverse([last_bck | bck] ++ [last_fwd | fwd])}
@@ -43,12 +43,12 @@ defmodule Type.Inference.Macros do
     empty_opcode(opcode_ast)
   end
 
-  defmacro forward(state_param_ast, {:..., _, _}, do: code_ast) do
+  defmacro forward(state_param_ast, meta_ast, {:..., _, _}, do: code_ast) do
     # retrieve the opcode.
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
     |> filter_params([state_param_ast, code_ast])
-    |> assemble(state_param_ast, code_ast, :forward)
+    |> assemble(state_param_ast, code_ast, meta_ast, :forward)
     |> Macro.escape
     |> stash(:forward)
   end
@@ -62,12 +62,12 @@ defmodule Type.Inference.Macros do
     |> stash(:forward)
   end
 
-  defmacro backprop(state_param_ast, {:..., _, _}, do: code_ast) do
+  defmacro backprop(state_param_ast, meta_ast, {:..., _, _}, do: code_ast) do
     # retrieve the opcode.
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
     |> filter_params([state_param_ast, code_ast])
-    |> assemble(state_param_ast, code_ast, :backprop)
+    |> assemble(state_param_ast, code_ast, meta_ast, :backprop)
     |> Macro.escape
     |> stash(:backprop)
   end
@@ -131,9 +131,9 @@ defmodule Type.Inference.Macros do
     ]}
   end
 
-  defp assemble(opcode_ast, state_param_ast, code_ast, symbol) do
+  defp assemble(opcode_ast, state_param_ast, meta_ast, code_ast, symbol) do
     quote do
-      def unquote(symbol)(unquote(opcode_ast), unquote(state_param_ast)) do
+      def unquote(symbol)(unquote(opcode_ast), unquote(meta_ast), unquote(state_param_ast)) do
         unquote(code_ast)
       end
     end
