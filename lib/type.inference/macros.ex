@@ -93,14 +93,14 @@ defmodule Type.Inference.Macros do
     end
 
     a = Macro.escape(quote do
-      def forward(unquote(opcode_ast), state) do
+      def forward(unquote(opcode_ast), state, _meta) do
         unquote(warning)
         {:ok, state}
       end
     end)
 
     b = Macro.escape(quote do
-      def backprop(unquote(opcode_ast), state) do
+      def backprop(unquote(opcode_ast), state, _meta) do
         {:ok, [state]}
       end
     end)
@@ -126,14 +126,14 @@ defmodule Type.Inference.Macros do
 
     {:def, [context: Elixir, import: Kernel],
     [
-      {symbol, [context: Elixir], [opcode_ast, {:state, [], Elixir}]},
+      {symbol, [context: Elixir], [opcode_ast, {:state, [], Elixir}, {:_meta, [], Elixir}]},
       [do: {:__block__, [], [warning, ok_state]}]
     ]}
   end
 
   defp assemble(opcode_ast, state_param_ast, meta_ast, code_ast, symbol) do
     quote do
-      def unquote(symbol)(unquote(opcode_ast), unquote(meta_ast), unquote(state_param_ast)) do
+      def unquote(symbol)(unquote(opcode_ast), unquote(state_param_ast), unquote(meta_ast)) do
         unquote(code_ast)
       end
     end

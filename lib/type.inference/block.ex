@@ -135,7 +135,7 @@ defmodule Type.Inference.Block.Parser do
     opcode_modules
     |> List.wrap
     |> Enum.reduce(:unknown, fn
-      module, :unknown -> module.forward(instr, latest)
+      module, :unknown -> module.forward(instr, latest, _meta = %{})
       _, result -> result
     end)
   end
@@ -179,7 +179,7 @@ defmodule Type.Inference.Block.Parser do
     |> List.wrap
     |> Enum.reduce(:unknown, fn
       module, :unknown ->
-        module.backprop(opcode, latest)
+        module.backprop(opcode, latest, _meta = %{})
       _, result -> result
     end)
   end
