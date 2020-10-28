@@ -114,7 +114,10 @@ defmodule Type.Inference.Block.Parser do
   def do_forward(state = %{code: [opcode | _]}, opcode_modules) do
     new_histories = Enum.flat_map(state.histories,
       fn history = [latest | earlier] ->
-        case reduce_forward(opcode, latest, state.meta, opcode_modules) do
+        opcode
+        |> reduce_forward(latest, state.meta, opcode_modules)
+        |> validate_forward  # prevents stupid mistakes
+        |> case do
           {:ok, new_vm} -> [[new_vm | history]]
           {:backprop, replacement_vms} ->
             do_all_backprop(state,
@@ -135,9 +138,23 @@ defmodule Type.Inference.Block.Parser do
     opcode_modules
     |> List.wrap
     |> Enum.reduce(:unknown, fn
-      module, :unknown -> module.forward(instr, latest, meta)
+      module, :unknown ->
+        module.forward(instr, latest, meta)
       _, result -> result
     end)
+  end
+
+  if Mix.env() == :test do
+    defp validate_forward(fwd = {:ok, %Registers{}}), do: fwd
+    defp validate_forward(bck = {:backprop, [%Registers{} | _]}), do: bck
+    defp validate_forward(bck = {:backprop, []}), do: bck
+    defp validate_forward(:no_return), do: :no_return
+    defp validate_forward(:unknown), do: :unknown
+    defp validate_forward(xxx) do
+      raise "invalid forward propagation result #{inspect xxx}"
+    end
+  else
+    defp validate_forward(any), do: any
   end
 
   @spec do_all_backprop(t, [Registers.t], history, [module]) :: [history]
@@ -162,7 +179,10 @@ defmodule Type.Inference.Block.Parser do
   def do_backprop(state = %{stack: [opcode | _]}, opcode_modules) do
     new_histories = state.histories
     |> Enum.flat_map(fn [latest, _to_replace | earlier] ->
-      case reduce_backprop(opcode, latest, state.meta, opcode_modules) do
+      opcode
+      |> reduce_backprop(latest, state.meta, opcode_modules)
+      |> validate_backprop  # prevents stupid mistakes
+      |> case do
         {:ok, new_starting_points} ->
           Enum.map(new_starting_points, &[&1 | earlier])
       end
@@ -171,6 +191,16 @@ defmodule Type.Inference.Block.Parser do
     state
     |> rollback(new_histories)
     |> do_backprop(opcode_modules)
+  end
+
+  if Mix.env() == :test do
+    defp validate_backprop(bck = {:ok, []}), do: bck
+    defp validate_backprop(bck = {:ok, [%Registers{} | _]}), do: bck
+    defp validate_backprop(bck) do
+      raise "invalid backprop result #{inspect bck}"
+    end
+  else
+    defp validate_backprop(bck), do: bck
   end
 
   @spec reduce_backprop(term, Registers.t, map, op_module) :: {:ok, [Registers.t]}
