@@ -5,7 +5,7 @@ defmodule TypeTest.Opcode.ReturnTest do
   use ExUnit.Case, async: true
 
   alias Type.Inference.Block.Parser
-  alias Type.Inference.Vm
+  alias Type.Inference.Registers
 
   import Type
 
@@ -18,8 +18,8 @@ defmodule TypeTest.Opcode.ReturnTest do
       %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:integer)}},
-        %Vm{xreg: %{0 => builtin(:integer)}}
+        %Registers{x: %{0 => builtin(:integer)}},
+        %Registers{x: %{0 => builtin(:integer)}}
       ] = history
     end
 
@@ -29,8 +29,8 @@ defmodule TypeTest.Opcode.ReturnTest do
       %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:any)}},
-        %Vm{xreg: %{0 => builtin(:any)}}
+        %Registers{x: %{0 => builtin(:any)}},
+        %Registers{x: %{0 => builtin(:any)}}
       ] = history
     end
   end

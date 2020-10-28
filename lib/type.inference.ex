@@ -10,7 +10,7 @@ defmodule Type.Inference do
   @type state :: %__MODULE__{
     code:  [opcode],
     stack: [opcode],
-    regs:  [[Vm.t]]
+    regs:  [[Registers.t]]
   }
 
   import Type

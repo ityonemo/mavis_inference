@@ -7,8 +7,8 @@ defmodule Type.Inference.Opcodes.Move do
   # MOVE SEMANTICS
 
   opcode {:move, {:x, from}, {:x, to}} do
-    forward(state, ...) do
-      if is_map_key(state.xreg, from) do
+    forward(state, _meta, ...) do
+      if is_map_key(state.x, from) do
         {:ok, put_reg(state, to, get_reg(state, from))}
       else
         # we don't, a priori know what the datatype here is.
@@ -16,7 +16,7 @@ defmodule Type.Inference.Opcodes.Move do
       end
     end
 
-    backprop(state, ...) do
+    backprop(state, _meta, ...) do
       prev_state = state
       |> put_reg(from, get_reg(state, to))
       |> tombstone(to)
@@ -26,10 +26,10 @@ defmodule Type.Inference.Opcodes.Move do
   end
 
   opcode {:move, value, {:x, to}} do
-    forward(state, ...) do
+    forward(state, _meta, ...) do
       {:ok, put_reg(state, to, type_of(value))}
     end
-    backprop(state, ...) do
+    backprop(state, _meta, ...) do
       {:ok, [tombstone(state, to)]}
     end
   end

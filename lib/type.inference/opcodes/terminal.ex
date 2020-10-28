@@ -7,7 +7,7 @@ defmodule Type.Inference.Opcodes.Terminal do
   alias Type.Inference.Module.ParallelParser
 
   opcode {:select_val, {:x, from}, {:f, _fail}, {:list, list}} do
-    forward(state, ...) do
+    forward(state, _meta, ...) do
       # TODO: fix this so that it merges instead of
       # clobbering, for example if we have two String.t's coming
       # in with different jump registers.
@@ -18,7 +18,7 @@ defmodule Type.Inference.Opcodes.Terminal do
       end)
       |> Enum.into(%{})
 
-      if is_map_key(state.xreg, from) do
+      if is_map_key(state.x, from) do
         jump_reg = get_reg(state, from)
 
         result_type = ParallelParser.obtain_label(select_table[jump_reg])
@@ -45,10 +45,10 @@ defmodule Type.Inference.Opcodes.Terminal do
   defp evaluate_jump({:f, int}), do: int
 
   opcode :return do
-    forward(state = %{xreg: %{0 => _type}}, ...) do
+    forward(state = %{x: %{0 => _type}}, _meta, ...) do
       {:ok, state}
     end
-    forward(state = %{xreg: %{}}, ...) do
+    forward(state = %{x: %{}}, _meta, ...) do
       {:backprop, [put_reg(state, 0, builtin(:any))]}
     end
 
@@ -58,7 +58,7 @@ defmodule Type.Inference.Opcodes.Terminal do
   opcode {:line, _}, :noop
 
   opcode {:func_info, _, _, _} do
-    forward(state, ...) do
+    forward(state, _meta, ...) do
       {:ok, put_reg(state, 0, builtin(:none))}
     end
 

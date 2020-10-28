@@ -7,7 +7,7 @@ defmodule TypeTest.Opcode.GcBifTest do
   @moduletag :opcodes
 
   alias Type.Inference.Block.Parser
-  alias Type.Inference.Vm
+  alias Type.Inference.Registers
 
   import Type
 
@@ -22,8 +22,8 @@ defmodule TypeTest.Opcode.GcBifTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
-        %Vm{xreg: %{1 => @bitstring}}
+        %Registers{x: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
+        %Registers{x: %{1 => @bitstring}}
       ] = history
     end
 
@@ -35,8 +35,8 @@ defmodule TypeTest.Opcode.GcBifTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
-        %Vm{xreg: %{1 => @bitstring}}
+        %Registers{x: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
+        %Registers{x: %{1 => @bitstring}}
       ] = history
     end
 
@@ -68,8 +68,8 @@ defmodule TypeTest.Opcode.GcBifTest do
 
       Enum.each(@add_result, fn {{left, right}, res} ->
         assert [
-          %Vm{xreg: %{0 => res, 1 => right}, module: nil},
-          %Vm{xreg: %{0 => left, 1 => right}, module: nil}] in histories
+          %Registers{x: %{0 => res, 1 => right}},
+          %Registers{x: %{0 => left, 1 => right}}] in histories
       end)
     end
   end
@@ -77,12 +77,15 @@ defmodule TypeTest.Opcode.GcBifTest do
   describe "chained bif test" do
     @opcode_bitsz2 {:gc_bif, :bit_size, {:f, 0}, 1, [x: 1], {:x, 1}}
     test "a lambda with chained code" do
-      state = Parser.new([@opcode_bitsz2, @opcode_add])
-      state
+      state = [@opcode_bitsz2, @opcode_add]
+      |> Parser.new
       |> Parser.do_forward
       |> Parser.do_forward
 
-      flunk
+      assert %{histories: [
+        [%{x: %{0 => builtin(:pos_integer)}}, _,
+         %{x: %{0 => builtin(:pos_integer), 1 => builtin(:bitstring)}}] | _
+      ]} = state
     end
   end
 end

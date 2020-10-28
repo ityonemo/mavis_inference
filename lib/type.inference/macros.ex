@@ -1,14 +1,33 @@
 defmodule Type.Inference.Macros do
-  defmacro __using__(_) do
+
+  @moduledoc """
+  ## options:
+  - debug_dump_code: if true then dumps the code at the end.
+  """
+
+  defp macro_inspect(code_ast, label \\ nil) do
+    prefix = if label, do: "\n#{label}: ", else: ""
+    IO.puts(prefix <> Macro.to_string(code_ast))
+    code_ast
+  end
+
+  defmacro __using__(opts) do
+
+    debug_dump_code = if opts[:debug_dump_code] do
+      quote do @debug_dump_code true end
+    end
+
     quote do
       @behaviour Type.Engine.Api
 
       import Type.Inference.Macros, only: [
-        opcode: 2, forward: 3, forward: 1, backprop: 3, backprop: 1,
+        opcode: 2, forward: 4, forward: 1, backprop: 4, backprop: 1,
         put_reg: 3, get_reg: 2, merge_reg: 2, tombstone: 2]
 
       Module.register_attribute(__MODULE__, :forward, accumulate: true)
       Module.register_attribute(__MODULE__, :backprop, accumulate: true)
+
+      unquote(debug_dump_code)
 
       @before_compile Type.Inference.Macros
     end
@@ -20,15 +39,20 @@ defmodule Type.Inference.Macros do
     bck = List.wrap(Module.get_attribute(caller, :backprop))
 
     last_fwd = quote do
-      def forward(_, _), do: :unknown
+      def forward(_, _, _), do: :unknown
     end
     last_bck = quote do
-      def backprop(_, _), do: :unknown
+      def backprop(_, _, _), do: :unknown
     end
 
-    {:__block__, [], Enum.reverse([last_bck | bck] ++ [last_fwd | fwd])}
-  end
+    code = {:__block__, [], Enum.reverse([last_bck | bck] ++ [last_fwd | fwd])}
 
+    if Module.get_attribute(caller, :debug_dump_code) do
+      code |> macro_inspect
+    end
+
+    code
+  end
 
   ### KEY MACROS
 
@@ -37,18 +61,30 @@ defmodule Type.Inference.Macros do
     opcode_block_ast
   end
   defmacro opcode(opcode_ast, :unimplemented) do
-    empty_opcode(opcode_ast, warn: true)
+    a = assemble_noop(opcode_ast, :forward, warn: "the opcode #{Macro.to_string opcode_ast} is not implemented yet.")
+    b = assemble_noop(opcode_ast, :backprop)
+
+    quote do
+      @forward unquote(Macro.escape(a))
+      @backprop unquote(Macro.escape(b))
+    end
   end
   defmacro opcode(opcode_ast, :noop) do
-    empty_opcode(opcode_ast)
+    a = assemble_noop(opcode_ast, :forward)
+    b = assemble_noop(opcode_ast, :backprop)
+
+    quote do
+      @forward unquote(Macro.escape(a))
+      @backprop unquote(Macro.escape(b))
+    end
   end
 
-  defmacro forward(state_param_ast, {:..., _, _}, do: code_ast) do
+  defmacro forward(state_param_ast, meta_ast, {:..., _, _}, do: code_ast) do
     # retrieve the opcode.
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
-    |> filter_params([state_param_ast, code_ast])
-    |> assemble(state_param_ast, code_ast, :forward)
+    |> filter_params([state_param_ast, code_ast, meta_ast])
+    |> assemble(state_param_ast, meta_ast, code_ast, :forward)
     |> Macro.escape
     |> stash(:forward)
   end
@@ -62,12 +98,12 @@ defmodule Type.Inference.Macros do
     |> stash(:forward)
   end
 
-  defmacro backprop(state_param_ast, {:..., _, _}, do: code_ast) do
+  defmacro backprop(state_param_ast, meta_ast, {:..., _, _}, do: code_ast) do
     # retrieve the opcode.
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
-    |> filter_params([state_param_ast, code_ast])
-    |> assemble(state_param_ast, code_ast, :backprop)
+    |> filter_params([state_param_ast, code_ast, meta_ast])
+    |> assemble(state_param_ast, meta_ast, code_ast, :backprop)
     |> Macro.escape
     |> stash(:backprop)
   end
@@ -84,39 +120,13 @@ defmodule Type.Inference.Macros do
     quote do end
   end
 
-  defp empty_opcode(opcode_ast, opts \\ []) do
-    warning = if opts[:warn] do
-      opcode = Macro.to_string(opcode_ast)
-      quote do
-        IO.warn("the opcode #{unquote opcode} is not implemented yet.")
-      end
-    end
-
-    a = Macro.escape(quote do
-      def forward(unquote(opcode_ast), state) do
-        unquote(warning)
-        {:ok, state}
-      end
-    end)
-
-    b = Macro.escape(quote do
-      def backprop(unquote(opcode_ast), state) do
-        {:ok, [state]}
-      end
-    end)
-
-    quote do
-      unquote(stash(a, :forward))
-      unquote(stash(b, :backprop))
-    end
-  end
-
+  defp make_warn(string) do quote do IO.warn(unquote(string)) end end
   defp assemble_noop(opcode_ast, symbol, opts \\ []) do
-    warning = if opts[:warn] do
-      opcode = Macro.to_string(opcode_ast)
-      quote do
-        IO.warn("the method #{unquote symbol} for opcode #{unquote opcode} is not implemented.")
-      end
+    warning = case opts[:warn] do
+      true -> make_warn("the method #{symbol} for opcode #{Macro.to_string opcode_ast} is not implemented.")
+      nil -> nil
+      false -> nil
+      _ -> make_warn(opts[:warn])
     end
 
     ok_state = case symbol do
@@ -126,14 +136,14 @@ defmodule Type.Inference.Macros do
 
     {:def, [context: Elixir, import: Kernel],
     [
-      {symbol, [context: Elixir], [opcode_ast, {:state, [], Elixir}]},
+      {symbol, [context: Elixir], [opcode_ast, {:state, [], Elixir}, {:_meta, [], Elixir}]},
       [do: {:__block__, [], [warning, ok_state]}]
     ]}
   end
 
-  defp assemble(opcode_ast, state_param_ast, code_ast, symbol) do
+  defp assemble(opcode_ast, state_param_ast, meta_ast, code_ast, symbol) do
     quote do
-      def unquote(symbol)(unquote(opcode_ast), unquote(state_param_ast)) do
+      def unquote(symbol)(unquote(opcode_ast), unquote(state_param_ast), unquote(meta_ast)) do
         unquote(code_ast)
       end
     end
@@ -148,16 +158,16 @@ defmodule Type.Inference.Macros do
 
   # exports
   def put_reg(state, reg, type) do
-    %{state | xreg: Map.put(state.xreg, reg, type)}
+    %{state | x: Map.put(state.x, reg, type)}
   end
   def get_reg(state, reg) do
-    state.xreg[reg]
+    state.x[reg]
   end
   def merge_reg(state, registers) do
-    %{state | xreg: Map.merge(state.xreg, registers)}
+    %{state | x: Map.merge(state.x, registers)}
   end
   def tombstone(state, register) do
-    %{state | xreg: Map.delete(state.xreg, register)}
+    %{state | x: Map.delete(state.x, register)}
   end
 
   defp filter_params(opcode_ast, code_ast) do

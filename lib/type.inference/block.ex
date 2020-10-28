@@ -41,13 +41,13 @@ defmodule Type.Inference.Block.Parser do
 
   @type op_module :: [module] | module
 
-  alias Type.Inference.{Vm, Module}
+  alias Type.Inference.{Registers, Module}
 
   defstruct @enforce_keys ++ [
     stack: []
   ]
 
-  @type history :: [Vm.t]
+  @type history :: [Registers.t]
   @type metadata :: %{
     required(:module) => module,
     optional(:fa) => {atom, arity}
@@ -75,7 +75,7 @@ defmodule Type.Inference.Block.Parser do
     %__MODULE__{
       code: code,
       meta: Map.put(meta, :length, length(code)),
-      histories: [[%Vm{module: meta.module, xreg: regs}]]}
+      histories: [[%Registers{x: regs}]]}
   end
 
   @spec parse([Module.opcode], keyword | map) :: Block.t
@@ -89,7 +89,7 @@ defmodule Type.Inference.Block.Parser do
   @spec release(t) :: Block.t
   def release(%{histories: histories}) do
     Enum.map(histories,
-      &%Block{needs: List.last(&1).xreg, makes: List.first(&1).xreg[0]})
+      &%Block{needs: List.last(&1).x, makes: List.first(&1).x[0]})
   end
 
   @default_opcode_modules [
@@ -106,6 +106,7 @@ defmodule Type.Inference.Block.Parser do
   def do_analyze(state, opcode_modules) do
     state
     |> do_forward(opcode_modules)
+    |> log_forward
     |> do_analyze(opcode_modules)
   end
 
@@ -114,7 +115,10 @@ defmodule Type.Inference.Block.Parser do
   def do_forward(state = %{code: [opcode | _]}, opcode_modules) do
     new_histories = Enum.flat_map(state.histories,
       fn history = [latest | earlier] ->
-        case reduce_forward(opcode, latest, opcode_modules) do
+        opcode
+        |> reduce_forward(latest, state.meta, opcode_modules)
+        |> validate_forward  # prevents stupid mistakes
+        |> case do
           {:ok, new_vm} -> [[new_vm | history]]
           {:backprop, replacement_vms} ->
             do_all_backprop(state,
@@ -130,17 +134,18 @@ defmodule Type.Inference.Block.Parser do
     advance(state, new_histories)
   end
 
-  @spec reduce_forward(term, Vm.t, op_module) :: {:ok, Vm.t} | {:backprop, [Vm.t]} | :no_return | :unknown
-  defp reduce_forward(instr, latest, opcode_modules) do
+  @spec reduce_forward(term, Registers.t, map, op_module) :: {:ok, Registers.t} | {:backprop, [Registers.t]} | :no_return | :unknown
+  defp reduce_forward(instr, latest, meta, opcode_modules) do
     opcode_modules
     |> List.wrap
     |> Enum.reduce(:unknown, fn
-      module, :unknown -> module.forward(instr, latest)
+      module, :unknown ->
+        module.forward(instr, latest, meta)
       _, result -> result
     end)
   end
 
-  @spec do_all_backprop(t, [Vm.t], history, [module]) :: [history]
+  @spec do_all_backprop(t, [Registers.t], history, [module]) :: [history]
   defp do_all_backprop(state, replacement_vms, history, opcode_modules) do
     Enum.flat_map(replacement_vms, fn vm ->
       # cut off all unprocessed code so we can return here.
@@ -149,6 +154,7 @@ defmodule Type.Inference.Block.Parser do
           stack: state.stack,
           histories: [[vm | history]]}
       |> do_backprop(opcode_modules)
+      |> log_backprop
       |> Map.get(:histories)
     end)
   end
@@ -162,7 +168,10 @@ defmodule Type.Inference.Block.Parser do
   def do_backprop(state = %{stack: [opcode | _]}, opcode_modules) do
     new_histories = state.histories
     |> Enum.flat_map(fn [latest, _to_replace | earlier] ->
-      case reduce_backprop(opcode, latest, opcode_modules) do
+      opcode
+      |> reduce_backprop(latest, state.meta, opcode_modules)
+      |> validate_backprop  # prevents stupid mistakes
+      |> case do
         {:ok, new_starting_points} ->
           Enum.map(new_starting_points, &[&1 | earlier])
       end
@@ -173,13 +182,13 @@ defmodule Type.Inference.Block.Parser do
     |> do_backprop(opcode_modules)
   end
 
-  @spec reduce_backprop(term, Vm.t, op_module) :: {:ok, [Vm.t]}
-  defp reduce_backprop(opcode, latest, opcode_modules) do
+  @spec reduce_backprop(term, Registers.t, map, op_module) :: {:ok, [Registers.t]}
+  defp reduce_backprop(opcode, latest, meta, opcode_modules) do
     opcode_modules
     |> List.wrap
     |> Enum.reduce(:unknown, fn
       module, :unknown ->
-        module.backprop(opcode, latest)
+        module.backprop(opcode, latest, meta)
       _, result -> result
     end)
   end
@@ -200,5 +209,44 @@ defmodule Type.Inference.Block.Parser do
       stack: tl(state.stack),
       histories: new_histories
     }
+  end
+
+  ################################################################
+  ## TESTING CONVENIENCES
+
+  if Mix.env() == :test do
+    defp validate_forward(fwd = {:ok, %Registers{}}), do: fwd
+    defp validate_forward(bck = {:backprop, [%Registers{} | _]}), do: bck
+    defp validate_forward(bck = {:backprop, []}), do: bck
+    defp validate_forward(:no_return), do: :no_return
+    defp validate_forward(:unknown), do: :unknown
+    defp validate_forward(xxx) do
+      raise "invalid forward result #{inspect xxx}"
+    end
+
+    defp validate_backprop(bck = {:ok, []}), do: bck
+    defp validate_backprop(bck = {:ok, [%Registers{} | _]}), do: bck
+    defp validate_backprop(bck) do
+      raise "invalid backprop result #{inspect bck}"
+    end
+
+    defp log_forward(state = %{meta: %{log: true}}) do
+      IO.puts("forward pass result: #{inspect state}")
+      state
+    end
+    defp log_forward(state), do: state
+
+    defp log_backprop(state = %{meta: %{log: true}}) do
+      IO.puts("backprop pass result: #{inspect state}")
+      state
+    end
+    defp log_backprop(state), do: state
+
+  else
+    defp validate_forward(any), do: any
+    defp validate_backprop(bck), do: bck
+
+    defp log_forward(state), do: state
+    defp log_backprop(state), do: state
   end
 end

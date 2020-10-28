@@ -6,7 +6,7 @@ defmodule TypeTest.Opcode.CallOnlyTest do
 
   alias Type.Inference.Module.ParallelParser
   alias Type.Inference.Block.Parser
-  alias Type.Inference.{Vm, Block}
+  alias Type.Inference.{Registers, Block}
 
   import Type
 
@@ -32,8 +32,8 @@ defmodule TypeTest.Opcode.CallOnlyTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:float)}},
-        %Vm{xreg: %{0 => builtin(:integer)}}
+        %Registers{x: %{0 => builtin(:float)}},
+        %Registers{x: %{0 => builtin(:integer)}}
       ] = history
     end
   end
@@ -57,8 +57,8 @@ defmodule TypeTest.Opcode.CallOnlyTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:integer)}},
-        %Vm{xreg: %{0 => builtin(:integer)}}
+        %Registers{x: %{0 => builtin(:integer)}},
+        %Registers{x: %{0 => builtin(:integer)}}
       ] = history
     end
 
@@ -68,8 +68,8 @@ defmodule TypeTest.Opcode.CallOnlyTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:integer)}},
-        %Vm{xreg: %{0 => builtin(:integer)}}
+        %Registers{x: %{0 => builtin(:integer)}},
+        %Registers{x: %{0 => builtin(:integer)}}
       ] = history
     end
   end
@@ -94,8 +94,8 @@ defmodule TypeTest.Opcode.CallOnlyTest do
 
       # note that history is prepended-to.
       assert [
-        %Vm{xreg: %{0 => builtin(:float), 1 => builtin(:integer)}},
-        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}}
+        %Registers{x: %{0 => builtin(:float), 1 => builtin(:integer)}},
+        %Registers{x: %{0 => builtin(:integer), 1 => builtin(:integer)}}
       ] = history
     end
 
@@ -105,8 +105,8 @@ defmodule TypeTest.Opcode.CallOnlyTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:float), 1 => builtin(:integer)}},
-        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}}
+        %Registers{x: %{0 => builtin(:float), 1 => builtin(:integer)}},
+        %Registers{x: %{0 => builtin(:integer), 1 => builtin(:integer)}}
       ] = history
     end
   end
