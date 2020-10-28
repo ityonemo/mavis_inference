@@ -15,6 +15,7 @@ defmodule TypeTest.Opcode.GcBifTest do
     @bitstring %Type.Bitstring{size: 0, unit: 1}
 
     @opcode_bitsz {:gc_bif, :bit_size, {:f, 0}, 1, [x: 1], {:x, 0}}
+
     test "forward propagates returns non_neg_integer" do
       state = Parser.new([@opcode_bitsz], preload: %{1 => @bitstring})
 
@@ -42,4 +43,46 @@ defmodule TypeTest.Opcode.GcBifTest do
     test "errors if incompatible datatypes are provided"
   end
 
+  @add_result %{
+    {builtin(:pos_integer), builtin(:pos_integer)} => builtin(:pos_integer),
+    {builtin(:pos_integer), 0}                     => builtin(:pos_integer),
+    {builtin(:pos_integer), builtin(:neg_integer)} => builtin(:integer),
+    {0,                     builtin(:pos_integer)} => builtin(:pos_integer),
+    {0,                     0}                     => 0,
+    {0,                     builtin(:neg_integer)} => builtin(:neg_integer),
+    {builtin(:neg_integer), builtin(:pos_integer)} => builtin(:integer),
+    {builtin(:neg_integer), 0}                     => builtin(:neg_integer),
+    {builtin(:neg_integer), builtin(:neg_integer)} => builtin(:neg_integer),
+    {builtin(:integer),     builtin(:float)}       => builtin(:float),
+    {builtin(:float),       builtin(:integer)}     => builtin(:float),
+    {builtin(:float),       builtin(:float)}       => builtin(:float)}
+
+  describe "when the opcode is the addition bif" do
+
+    @opcode_add {:gc_bif, :+, {:f, 0}, 2, [x: 0, x: 1], {:x, 0}}
+
+    test "triggers a full backpropagation on all number choices" do
+      state = Parser.new([@opcode_add])
+
+      assert %Parser{histories: histories} = Parser.do_forward(state)
+
+      Enum.each(@add_result, fn {{left, right}, res} ->
+        assert [
+          %Vm{xreg: %{0 => res, 1 => right}, module: nil},
+          %Vm{xreg: %{0 => left, 1 => right}, module: nil}] in histories
+      end)
+    end
+  end
+
+  describe "chained bif test" do
+    @opcode_bitsz2 {:gc_bif, :bit_size, {:f, 0}, 1, [x: 1], {:x, 1}}
+    test "a lambda with chained code" do
+      state = Parser.new([@opcode_bitsz2, @opcode_add])
+      state
+      |> Parser.do_forward
+      |> Parser.do_forward
+
+      flunk
+    end
+  end
 end

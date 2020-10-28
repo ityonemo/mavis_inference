@@ -23,7 +23,8 @@ defmodule TypeTest.InferenceTest do
 
     test "a lambda that sets a value" do
       assert %Type.Function{params: [], return: 47} = Type.of(&TypeTest.LambdaExamples.forty_seven/0)
-      assert %Type.Function{params: [], return: remote(String.t)} = Type.of(&TypeTest.LambdaExamples.forty_seven_str/0)
+      assert %Type.Function{params: [], return: %Type{module: String, name: :t}} =
+        Type.of(&TypeTest.LambdaExamples.forty_seven_str/0)
     end
 
     test "a lambda with a backpropagating function" do
@@ -34,7 +35,11 @@ defmodule TypeTest.InferenceTest do
 
     test "a lambda with a function with forking code" do
       assert FunctionProperties.has_opcode?({TypeTest.LambdaExamples, :with_add, 2}, [:gc_bif, :+])
-      assert %Type.Function{params: [builtin(:any), builtin(:any)], return: builtin(:any)} = Type.of(&TypeTest.LambdaExamples.with_add/2)
+      assert %Type.Union{of: funs} = Type.of(&TypeTest.LambdaExamples.with_add/2)
+
+      assert %Type.Function{inferred: true, params: [builtin(:float), builtin(:float)], return: builtin(:float)} in funs
+      assert %Type.Function{inferred: true, params: [builtin(:float), builtin(:integer)], return: builtin(:float)} in funs
+      assert %Type.Function{inferred: true, params: [builtin(:integer), builtin(:float)], return: builtin(:float)} in funs
     end
   end
 end

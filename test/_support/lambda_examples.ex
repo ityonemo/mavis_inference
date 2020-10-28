@@ -6,6 +6,10 @@ defmodule TypeTest.LambdaExamples do
 
   def with_bitsize(a), do: :erlang.bit_size(a)
 
+  def chained(a, b) do
+    a + :erlang.bit_size(b)
+  end
+
   def forty_seven, do: 47
   def forty_seven_str, do: "forty seven"
 end

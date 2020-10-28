@@ -1,3 +1,3 @@
 %{
-  "mavis": {:hex, :mavis, "0.0.1", "d81f5e8a61abc989dcbb3152382b39395da9c90adcc5648b81f56bff424b66b8", [:mix], [], "hexpm", "1f9261e5093290eef8ee15e26c08433e080be07fd9d5acd20a7c3e8d898bece9"},
+  "mavis": {:hex, :mavis, "0.0.2", "260b7a841e20d572c1ee2996f29d8fa5f52210992bca8a8cd77d5984e1c943d0", [:mix], [], "hexpm", "2dba0fa9dd1eb6a7f6968d435277228b8d3db2c072cab4cfb4c5806867623991"},
 }

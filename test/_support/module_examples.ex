@@ -16,4 +16,6 @@ defmodule TypeTest.ModuleExamples do
     defp functionp(x), do: x
   end
 
+  defmodule Empty do
+  end
 end

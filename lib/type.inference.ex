@@ -6,15 +6,11 @@ defmodule Type.Inference do
   ]
 
   @type opcode :: atom | tuple
-  @type reg_state :: %{
-    optional(integer) => Type.t,
-    optional(:line) => non_neg_integer,
-    optional(:warn) => any}
 
   @type state :: %__MODULE__{
     code:  [opcode],
     stack: [opcode],
-    regs:  [[reg_state]]
+    regs:  [[Vm.t]]
   }
 
   import Type
