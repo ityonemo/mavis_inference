@@ -8,11 +8,11 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
   end
   """
 
-  describe "a completely empty opcode module" do
+  setup_all do
+    Code.compile_string(@completely_empty_opcode_module)
+  end
 
-    setup do
-      Code.compile_string(@completely_empty_opcode_module)
-    end
+  describe "a completely empty opcode module" do
 
     test "can still be called with forward" do
       assert :unknown == TypeTest.EOM.forward(:foo, %{})

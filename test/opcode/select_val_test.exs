@@ -10,7 +10,7 @@ defmodule TypeTest.Opcode.SelectValTest do
   alias Type.Inference.Block
   alias Type.Inference.Block.Parser
   alias Type.Inference.Module.ParallelParser
-  alias Type.Inference.Vm
+  alias Type.Inference.Registers
 
   describe "when the opcode is a register movement" do
     @op_list [atom: :foo, f: 4, atom: :bar, f: 5]
@@ -35,15 +35,15 @@ defmodule TypeTest.Opcode.SelectValTest do
       state = Parser.new([@opcode_sel], preload: %{0 => :foo})
       assert %Parser{histories: [history]} = Parser.do_forward(state)
       assert [
-        %Vm{xreg: %{0 => builtin(:integer)}},
-        %Vm{xreg: %{0 => :foo}}
+        %Registers{x: %{0 => builtin(:integer)}},
+        %Registers{x: %{0 => :foo}}
       ] = history
 
       state = Parser.new([@opcode_sel], preload: %{0 => :bar})
       assert %Parser{histories: [history]} = Parser.do_forward(state)
       assert [
-        %Vm{xreg: %{0 => builtin(:float)}},
-        %Vm{xreg: %{0 => :bar}}
+        %Registers{x: %{0 => builtin(:float)}},
+        %Registers{x: %{0 => :bar}}
       ] = history
     end
 
@@ -51,8 +51,8 @@ defmodule TypeTest.Opcode.SelectValTest do
       state = Parser.new([@opcode_sel])
       assert %Parser{histories: histories} = Parser.do_forward(state)
       assert [
-        [%Vm{xreg: %{0 => builtin(:float)}}, %Vm{xreg: %{0 => :bar}}],
-        [%Vm{xreg: %{0 => builtin(:integer)}}, %Vm{xreg: %{0 => :foo}}]
+        [%Registers{x: %{0 => builtin(:float)}}, %Registers{x: %{0 => :bar}}],
+        [%Registers{x: %{0 => builtin(:integer)}}, %Registers{x: %{0 => :foo}}]
       ] = histories
     end
   end

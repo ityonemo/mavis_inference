@@ -6,7 +6,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
   use Type.Inference.Macros
 
   alias Type.Inference.Block.Parser
-  alias Type.Inference.Vm
+  alias Type.Inference.Registers
   import Type
 
   describe "a splitting opcode" do
@@ -16,7 +16,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
       # integer -> integer
       # atom -> atom
       forward(state, ...) do
-        if state.xreg == %{} do
+        if state.x == %{} do
           {:backprop, [
             put_reg(state, 0, builtin(:integer)),
             put_reg(state, 0, builtin(:atom))]}
@@ -31,10 +31,10 @@ defmodule TypeTest.Abstract.OpcodeTest do
 
       assert %Parser{histories: histories} = Parser.do_forward(state, __MODULE__)
 
-      assert [[%Vm{xreg: %{0 => builtin(:integer)}},
-               %Vm{xreg: %{0 => builtin(:integer)}}],
-              [%Vm{xreg: %{0 => builtin(:atom)}},
-               %Vm{xreg: %{0 => builtin(:atom)}}]] = histories
+      assert [[%Registers{x: %{0 => builtin(:integer)}},
+               %Registers{x: %{0 => builtin(:integer)}}],
+              [%Registers{x: %{0 => builtin(:atom)}},
+               %Registers{x: %{0 => builtin(:atom)}}]] = histories
     end
   end
 
@@ -43,9 +43,9 @@ defmodule TypeTest.Abstract.OpcodeTest do
     opcode :combiner do
       forward(state, ...) do
         cond do
-          not is_map_key(state.xreg, 0) ->
+          not is_map_key(state.x, 0) ->
             {:backprop, [put_reg(state, 0, :foo), put_reg(state, 0, :bar)]}
-          not is_map_key(state.xreg, 1) ->
+          not is_map_key(state.x, 1) ->
             {:backprop, [put_reg(state, 1, :foo), put_reg(state, 1, :bar)]}
           true ->
             {:ok, state}
@@ -58,20 +58,20 @@ defmodule TypeTest.Abstract.OpcodeTest do
 
       assert %Parser{histories: histories} = Parser.do_forward(state, __MODULE__)
 
-      assert [[%Vm{xreg: %{0 => :foo, 1 => :foo}},
-               %Vm{xreg: %{0 => :foo, 1 => :foo}}],
-              [%Vm{xreg: %{0 => :foo, 1 => :bar}},
-               %Vm{xreg: %{0 => :foo, 1 => :bar}}],
-              [%Vm{xreg: %{0 => :bar, 1 => :foo}},
-               %Vm{xreg: %{0 => :bar, 1 => :foo}}],
-              [%Vm{xreg: %{0 => :bar, 1 => :bar}},
-               %Vm{xreg: %{0 => :bar, 1 => :bar}}]] = histories
+      assert [[%Registers{x: %{0 => :foo, 1 => :foo}},
+               %Registers{x: %{0 => :foo, 1 => :foo}}],
+              [%Registers{x: %{0 => :foo, 1 => :bar}},
+               %Registers{x: %{0 => :foo, 1 => :bar}}],
+              [%Registers{x: %{0 => :bar, 1 => :foo}},
+               %Registers{x: %{0 => :bar, 1 => :foo}}],
+              [%Registers{x: %{0 => :bar, 1 => :bar}},
+               %Registers{x: %{0 => :bar, 1 => :bar}}]] = histories
     end
 
     opcode :filter do
       forward(state, ...) do
         cond do
-          not is_map_key(state.xreg, 0) ->
+          not is_map_key(state.x, 0) ->
             {:backprop, [put_reg(state, 0, :foo)]}
           true ->
             {:ok, state}
@@ -79,7 +79,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
       end
 
       backprop(state, ...) do
-        if state.xreg[0] == :foo do
+        if state.x[0] == :foo do
           {:ok, [state]}
         else
           {:ok, []}
@@ -92,7 +92,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
 
       assert %Parser{histories: histories} = Parser.do_forward(state, __MODULE__)
 
-      assert [[%Vm{xreg: %{0 => :foo}}, %Vm{xreg: %{0 => :foo}}]] = histories
+      assert [[%Registers{x: %{0 => :foo}}, %Registers{x: %{0 => :foo}}]] = histories
     end
 
     test "combining the two" do
@@ -102,8 +102,8 @@ defmodule TypeTest.Abstract.OpcodeTest do
       |> Parser.do_forward(__MODULE__)
       |> Parser.do_forward(__MODULE__)
 
-      assert [[%Type.Inference.Vm{xreg: %{0 => :foo, 1 => :foo}} | _],
-             [%Type.Inference.Vm{xreg: %{0 => :foo, 1 => :bar}} | _]] = histories
+      assert [[%Type.Inference.Registers{x: %{0 => :foo, 1 => :foo}} | _],
+             [%Type.Inference.Registers{x: %{0 => :foo, 1 => :bar}} | _]] = histories
     end
 
   end

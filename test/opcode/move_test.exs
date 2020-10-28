@@ -8,7 +8,7 @@ defmodule TypeTest.Opcode.MoveTest do
   import Type, only: :macros
 
   alias Type.Inference.Block.Parser
-  alias Type.Inference.Vm
+  alias Type.Inference.Registers
 
   describe "when the opcode is a register movement" do
     @opcode_reg {:move, {:x, 0}, {:x, 1}}
@@ -18,8 +18,8 @@ defmodule TypeTest.Opcode.MoveTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}},
-        %Vm{xreg: %{0 => builtin(:integer)}}
+        %Registers{x: %{0 => builtin(:integer), 1 => builtin(:integer)}},
+        %Registers{x: %{0 => builtin(:integer)}}
       ] = history
     end
 
@@ -29,8 +29,8 @@ defmodule TypeTest.Opcode.MoveTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:any), 1 => builtin(:any)}},
-        %Vm{xreg: %{0 => builtin(:any)}}
+        %Registers{x: %{0 => builtin(:any), 1 => builtin(:any)}},
+        %Registers{x: %{0 => builtin(:any)}}
       ] = history
     end
 
@@ -41,7 +41,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
       [[last | rest]] = propagated.histories
 
-      new_type = %{last | xreg: %{0 => builtin(:any), 1 => builtin(:integer)}}
+      new_type = %{last | x: %{0 => builtin(:any), 1 => builtin(:integer)}}
 
       # rewrite the propragated information to contain typed information
       # in the targeted register.
@@ -59,8 +59,8 @@ defmodule TypeTest.Opcode.MoveTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}},
-        %Vm{xreg: %{0 => builtin(:integer)}}
+        %Registers{x: %{0 => builtin(:integer), 1 => builtin(:integer)}},
+        %Registers{x: %{0 => builtin(:integer)}}
       ] = history
     end
 
@@ -70,8 +70,8 @@ defmodule TypeTest.Opcode.MoveTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:any), 1 => builtin(:any)}},
-        %Vm{xreg: %{0 => builtin(:any)}}
+        %Registers{x: %{0 => builtin(:any), 1 => builtin(:any)}},
+        %Registers{x: %{0 => builtin(:any)}}
       ] = history
     end
 
@@ -82,21 +82,21 @@ defmodule TypeTest.Opcode.MoveTest do
 
       [[last | rest]] = propagated.histories
 
-      new_type = %{last | xreg: %{0 => builtin(:any), 1 => builtin(:integer)}}
+      new_type = %{last | x: %{0 => builtin(:any), 1 => builtin(:integer)}}
 
       # rewrite the propragated information to contain typed information
       # in the targeted register.
       end_state = %{propagated | histories: [[new_type | rest]]}
 
       # check to make sure we don't know that it's supposed to be integer yet.
-      assert [%Vm{xreg: %{0 => builtin(:any)}}] = rest
+      assert [%Registers{x: %{0 => builtin(:any)}}] = rest
 
       # check to see do_backprop this rewrites history.
       assert %{histories: [history]} = Parser.do_backprop(end_state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:integer), 1 => builtin(:integer)}},
-        %Vm{xreg: %{0 => builtin(:integer)}}
+        %Registers{x: %{0 => builtin(:integer), 1 => builtin(:integer)}},
+        %Registers{x: %{0 => builtin(:integer)}}
       ] = history
     end
   end
@@ -108,7 +108,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
-      assert [%Vm{xreg: %{1 => 47}}, %Vm{xreg: %{}}] = history
+      assert [%Registers{x: %{1 => 47}}, %Registers{x: %{}}] = history
     end
 
     test "backpropagation is ok, if the values match" do
@@ -118,7 +118,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
       [[last | rest]] = propagated.histories
 
-      new_type = %{last | xreg: %{1 => builtin(:integer)}}
+      new_type = %{last | x: %{1 => builtin(:integer)}}
 
       # rewrite the propragated information to contain typed information
       # in the targeted register.
@@ -139,7 +139,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
-      assert [%Vm{xreg: %{1 => :foo}}, %Vm{xreg: %{}}] = history
+      assert [%Registers{x: %{1 => :foo}}, %Registers{x: %{}}] = history
     end
 
     test "backpropagation is ok, if the values match" do
@@ -149,7 +149,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
       [[last | rest]] = propagated.histories
 
-      new_type = %{last | xreg: %{1 => builtin(:atom)}}
+      new_type = %{last | x: %{1 => builtin(:atom)}}
 
       # rewrite the propragated information to contain typed information
       # in the targeted register.
@@ -171,7 +171,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
-      assert [%Vm{xreg: %{1 => @string}}, %Vm{xreg: %{}}] = history
+      assert [%Registers{x: %{1 => @string}}, %Registers{x: %{}}] = history
     end
 
     test "backpropagation is ok, if the values match" do
@@ -181,7 +181,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
       [[last | rest]] = propagated.histories
 
-      new_type = %{last | xreg: %{1 => @string}}
+      new_type = %{last | x: %{1 => @string}}
 
       # rewrite the propragated information to contain typed information
       # in the targeted register.
@@ -203,7 +203,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
-      assert [%Vm{xreg: %{1 => []}}, %Vm{xreg: %{}}] = history
+      assert [%Registers{x: %{1 => []}}, %Registers{x: %{}}] = history
     end
 
     test "backpropagation is ok, if the values match" do
@@ -213,7 +213,7 @@ defmodule TypeTest.Opcode.MoveTest do
 
       [[last | rest]] = propagated.histories
 
-      new_type = %{last | xreg: %{1 => []}}
+      new_type = %{last | x: %{1 => []}}
 
       # rewrite the propragated information to contain typed information
       # in the targeted register.

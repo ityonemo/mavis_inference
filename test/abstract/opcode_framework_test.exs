@@ -34,11 +34,11 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
 
       state = Parser.new([:noop])
       assert %{histories: [history]} = Parser.do_forward(state, __MODULE__)
-      assert [%{xreg: ^empty_map}, %{xreg: ^empty_map}] = history
+      assert [%{x: ^empty_map}, %{x: ^empty_map}] = history
 
       state2 = Parser.new([:noop], preload: @zero_int)
       assert %{histories: [history]} = Parser.do_forward(state2, __MODULE__)
-      assert [%{xreg: @zero_int}, %{xreg: @zero_int}] = history
+      assert [%{x: @zero_int}, %{x: @zero_int}] = history
     end
 
     test "backpropagation across the noop opcode is noop" do
@@ -60,11 +60,11 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
 
       state = Parser.new([:noop_fwd])
       assert %{histories: [history]} = Parser.do_forward(state, __MODULE__)
-      assert [%{xreg: ^empty_map}, %{xreg: ^empty_map}] = history
+      assert [%{x: ^empty_map}, %{x: ^empty_map}] = history
 
       state2 = Parser.new([:noop_fwd], preload: @zero_int)
       assert %{histories: [history]} = Parser.do_forward(state2, __MODULE__)
-      assert [%{xreg: @zero_int}, %{xreg: @zero_int}] = history
+      assert [%{x: @zero_int}, %{x: @zero_int}] = history
     end
   end
 

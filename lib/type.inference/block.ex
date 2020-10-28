@@ -41,13 +41,13 @@ defmodule Type.Inference.Block.Parser do
 
   @type op_module :: [module] | module
 
-  alias Type.Inference.{Vm, Module}
+  alias Type.Inference.{Registers, Module}
 
   defstruct @enforce_keys ++ [
     stack: []
   ]
 
-  @type history :: [Vm.t]
+  @type history :: [Registers.t]
   @type metadata :: %{
     required(:module) => module,
     optional(:fa) => {atom, arity}
@@ -75,7 +75,7 @@ defmodule Type.Inference.Block.Parser do
     %__MODULE__{
       code: code,
       meta: Map.put(meta, :length, length(code)),
-      histories: [[%Vm{module: meta.module, xreg: regs}]]}
+      histories: [[%Registers{module: meta.module, x: regs}]]}
   end
 
   @spec parse([Module.opcode], keyword | map) :: Block.t
@@ -89,7 +89,7 @@ defmodule Type.Inference.Block.Parser do
   @spec release(t) :: Block.t
   def release(%{histories: histories}) do
     Enum.map(histories,
-      &%Block{needs: List.last(&1).xreg, makes: List.first(&1).xreg[0]})
+      &%Block{needs: List.last(&1).x, makes: List.first(&1).x[0]})
   end
 
   @default_opcode_modules [
@@ -130,7 +130,7 @@ defmodule Type.Inference.Block.Parser do
     advance(state, new_histories)
   end
 
-  @spec reduce_forward(term, Vm.t, op_module) :: {:ok, Vm.t} | {:backprop, [Vm.t]} | :no_return | :unknown
+  @spec reduce_forward(term, Registers.t, op_module) :: {:ok, Registers.t} | {:backprop, [Registers.t]} | :no_return | :unknown
   defp reduce_forward(instr, latest, opcode_modules) do
     opcode_modules
     |> List.wrap
@@ -140,7 +140,7 @@ defmodule Type.Inference.Block.Parser do
     end)
   end
 
-  @spec do_all_backprop(t, [Vm.t], history, [module]) :: [history]
+  @spec do_all_backprop(t, [Registers.t], history, [module]) :: [history]
   defp do_all_backprop(state, replacement_vms, history, opcode_modules) do
     Enum.flat_map(replacement_vms, fn vm ->
       # cut off all unprocessed code so we can return here.
@@ -173,7 +173,7 @@ defmodule Type.Inference.Block.Parser do
     |> do_backprop(opcode_modules)
   end
 
-  @spec reduce_backprop(term, Vm.t, op_module) :: {:ok, [Vm.t]}
+  @spec reduce_backprop(term, Registers.t, op_module) :: {:ok, [Registers.t]}
   defp reduce_backprop(opcode, latest, opcode_modules) do
     opcode_modules
     |> List.wrap

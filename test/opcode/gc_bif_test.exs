@@ -7,7 +7,7 @@ defmodule TypeTest.Opcode.GcBifTest do
   @moduletag :opcodes
 
   alias Type.Inference.Block.Parser
-  alias Type.Inference.Vm
+  alias Type.Inference.Registers
 
   import Type
 
@@ -22,8 +22,8 @@ defmodule TypeTest.Opcode.GcBifTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
-        %Vm{xreg: %{1 => @bitstring}}
+        %Registers{x: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
+        %Registers{x: %{1 => @bitstring}}
       ] = history
     end
 
@@ -35,8 +35,8 @@ defmodule TypeTest.Opcode.GcBifTest do
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
       assert [
-        %Vm{xreg: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
-        %Vm{xreg: %{1 => @bitstring}}
+        %Registers{x: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
+        %Registers{x: %{1 => @bitstring}}
       ] = history
     end
 
@@ -68,8 +68,8 @@ defmodule TypeTest.Opcode.GcBifTest do
 
       Enum.each(@add_result, fn {{left, right}, res} ->
         assert [
-          %Vm{xreg: %{0 => res, 1 => right}, module: nil},
-          %Vm{xreg: %{0 => left, 1 => right}, module: nil}] in histories
+          %Registers{x: %{0 => res, 1 => right}, module: nil},
+          %Registers{x: %{0 => left, 1 => right}, module: nil}] in histories
       end)
     end
   end

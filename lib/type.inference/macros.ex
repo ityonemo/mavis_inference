@@ -148,16 +148,16 @@ defmodule Type.Inference.Macros do
 
   # exports
   def put_reg(state, reg, type) do
-    %{state | xreg: Map.put(state.xreg, reg, type)}
+    %{state | x: Map.put(state.x, reg, type)}
   end
   def get_reg(state, reg) do
-    state.xreg[reg]
+    state.x[reg]
   end
   def merge_reg(state, registers) do
-    %{state | xreg: Map.merge(state.xreg, registers)}
+    %{state | x: Map.merge(state.x, registers)}
   end
   def tombstone(state, register) do
-    %{state | xreg: Map.delete(state.xreg, register)}
+    %{state | x: Map.delete(state.x, register)}
   end
 
   defp filter_params(opcode_ast, code_ast) do
