@@ -106,6 +106,7 @@ defmodule Type.Inference.Block.Parser do
   def do_analyze(state, opcode_modules) do
     state
     |> do_forward(opcode_modules)
+    |> log_forward
     |> do_analyze(opcode_modules)
   end
 
@@ -144,19 +145,6 @@ defmodule Type.Inference.Block.Parser do
     end)
   end
 
-  if Mix.env() == :test do
-    defp validate_forward(fwd = {:ok, %Registers{}}), do: fwd
-    defp validate_forward(bck = {:backprop, [%Registers{} | _]}), do: bck
-    defp validate_forward(bck = {:backprop, []}), do: bck
-    defp validate_forward(:no_return), do: :no_return
-    defp validate_forward(:unknown), do: :unknown
-    defp validate_forward(xxx) do
-      raise "invalid forward propagation result #{inspect xxx}"
-    end
-  else
-    defp validate_forward(any), do: any
-  end
-
   @spec do_all_backprop(t, [Registers.t], history, [module]) :: [history]
   defp do_all_backprop(state, replacement_vms, history, opcode_modules) do
     Enum.flat_map(replacement_vms, fn vm ->
@@ -166,6 +154,7 @@ defmodule Type.Inference.Block.Parser do
           stack: state.stack,
           histories: [[vm | history]]}
       |> do_backprop(opcode_modules)
+      |> log_backprop
       |> Map.get(:histories)
     end)
   end
@@ -191,16 +180,6 @@ defmodule Type.Inference.Block.Parser do
     state
     |> rollback(new_histories)
     |> do_backprop(opcode_modules)
-  end
-
-  if Mix.env() == :test do
-    defp validate_backprop(bck = {:ok, []}), do: bck
-    defp validate_backprop(bck = {:ok, [%Registers{} | _]}), do: bck
-    defp validate_backprop(bck) do
-      raise "invalid backprop result #{inspect bck}"
-    end
-  else
-    defp validate_backprop(bck), do: bck
   end
 
   @spec reduce_backprop(term, Registers.t, map, op_module) :: {:ok, [Registers.t]}
@@ -230,5 +209,44 @@ defmodule Type.Inference.Block.Parser do
       stack: tl(state.stack),
       histories: new_histories
     }
+  end
+
+  ################################################################
+  ## TESTING CONVENIENCES
+
+  if Mix.env() == :test do
+    defp validate_forward(fwd = {:ok, %Registers{}}), do: fwd
+    defp validate_forward(bck = {:backprop, [%Registers{} | _]}), do: bck
+    defp validate_forward(bck = {:backprop, []}), do: bck
+    defp validate_forward(:no_return), do: :no_return
+    defp validate_forward(:unknown), do: :unknown
+    defp validate_forward(xxx) do
+      raise "invalid forward result #{inspect xxx}"
+    end
+
+    defp validate_backprop(bck = {:ok, []}), do: bck
+    defp validate_backprop(bck = {:ok, [%Registers{} | _]}), do: bck
+    defp validate_backprop(bck) do
+      raise "invalid backprop result #{inspect bck}"
+    end
+
+    defp log_forward(state = %{meta: %{log: true}}) do
+      IO.puts("forward pass result: #{inspect state}")
+      state
+    end
+    defp log_forward(state), do: state
+
+    defp log_backprop(state = %{meta: %{log: true}}) do
+      IO.puts("backprop pass result: #{inspect state}")
+      state
+    end
+    defp log_backprop(state), do: state
+
+  else
+    defp validate_forward(any), do: any
+    defp validate_backprop(bck), do: bck
+
+    defp log_forward(state), do: state
+    defp log_backprop(state), do: state
   end
 end
