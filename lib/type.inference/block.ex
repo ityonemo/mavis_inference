@@ -75,7 +75,7 @@ defmodule Type.Inference.Block.Parser do
     %__MODULE__{
       code: code,
       meta: Map.put(meta, :length, length(code)),
-      histories: [[%Registers{module: meta.module, x: regs}]]}
+      histories: [[%Registers{x: regs}]]}
   end
 
   @spec parse([Module.opcode], keyword | map) :: Block.t
@@ -114,7 +114,7 @@ defmodule Type.Inference.Block.Parser do
   def do_forward(state = %{code: [opcode | _]}, opcode_modules) do
     new_histories = Enum.flat_map(state.histories,
       fn history = [latest | earlier] ->
-        case reduce_forward(opcode, latest, opcode_modules) do
+        case reduce_forward(opcode, latest, state.meta, opcode_modules) do
           {:ok, new_vm} -> [[new_vm | history]]
           {:backprop, replacement_vms} ->
             do_all_backprop(state,
@@ -130,12 +130,12 @@ defmodule Type.Inference.Block.Parser do
     advance(state, new_histories)
   end
 
-  @spec reduce_forward(term, Registers.t, op_module) :: {:ok, Registers.t} | {:backprop, [Registers.t]} | :no_return | :unknown
-  defp reduce_forward(instr, latest, opcode_modules) do
+  @spec reduce_forward(term, Registers.t, map, op_module) :: {:ok, Registers.t} | {:backprop, [Registers.t]} | :no_return | :unknown
+  defp reduce_forward(instr, latest, meta, opcode_modules) do
     opcode_modules
     |> List.wrap
     |> Enum.reduce(:unknown, fn
-      module, :unknown -> module.forward(instr, latest, _meta = %{})
+      module, :unknown -> module.forward(instr, latest, meta)
       _, result -> result
     end)
   end
@@ -162,7 +162,7 @@ defmodule Type.Inference.Block.Parser do
   def do_backprop(state = %{stack: [opcode | _]}, opcode_modules) do
     new_histories = state.histories
     |> Enum.flat_map(fn [latest, _to_replace | earlier] ->
-      case reduce_backprop(opcode, latest, opcode_modules) do
+      case reduce_backprop(opcode, latest, state.meta, opcode_modules) do
         {:ok, new_starting_points} ->
           Enum.map(new_starting_points, &[&1 | earlier])
       end
@@ -173,13 +173,13 @@ defmodule Type.Inference.Block.Parser do
     |> do_backprop(opcode_modules)
   end
 
-  @spec reduce_backprop(term, Registers.t, op_module) :: {:ok, [Registers.t]}
-  defp reduce_backprop(opcode, latest, opcode_modules) do
+  @spec reduce_backprop(term, Registers.t, map, op_module) :: {:ok, [Registers.t]}
+  defp reduce_backprop(opcode, latest, meta, opcode_modules) do
     opcode_modules
     |> List.wrap
     |> Enum.reduce(:unknown, fn
       module, :unknown ->
-        module.backprop(opcode, latest, _meta = %{})
+        module.backprop(opcode, latest, meta)
       _, result -> result
     end)
   end

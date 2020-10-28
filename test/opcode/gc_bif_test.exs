@@ -68,8 +68,8 @@ defmodule TypeTest.Opcode.GcBifTest do
 
       Enum.each(@add_result, fn {{left, right}, res} ->
         assert [
-          %Registers{x: %{0 => res, 1 => right}, module: nil},
-          %Registers{x: %{0 => left, 1 => right}, module: nil}] in histories
+          %Registers{x: %{0 => res, 1 => right}},
+          %Registers{x: %{0 => left, 1 => right}}] in histories
       end)
     end
   end

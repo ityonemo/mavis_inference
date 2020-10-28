@@ -117,4 +117,58 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
     end
   end
 
+  describe "an opcode with a match in the state" do
+    opcode {:matched, match} do
+      forward(state = %{x: %{0 => match}}, _meta, ...) do
+        {:ok, put_reg(state, 0, :baz)}
+      end
+      forward(state, _meta, ...) do
+        {:ok, put_reg(state, 0, :quux)}
+      end
+    end
+
+    test "is able to match with values in the opcodes" do
+      %{histories: [[last | _]]} = [{:matched, :foo}]
+      |> Parser.new(preload: %{0 => :foo})
+      |> Parser.do_forward(__MODULE__)
+
+      assert last.x[0] == :baz
+    end
+
+    test "will pass through values that don't match" do
+      %{histories: [[last | _]]} = [{:matched, :foo}]
+      |> Parser.new(preload: %{0 => :bar})
+      |> Parser.do_forward(__MODULE__)
+
+      assert last.x[0] == :quux
+    end
+  end
+
+  describe "an opcode with a match in the metadata" do
+    opcode {:meta_matched, match} do
+      forward(state, %{foo: match}, ...) do
+        {:ok, put_reg(state, 0, :baz)}
+      end
+      forward(state, _meta, ...) do
+        {:ok, put_reg(state, 0, :quux)}
+      end
+    end
+
+    test "is able to match with metadata values" do
+      %{histories: [[last | _]]} = [{:meta_matched, :bar}]
+      |> Parser.new(foo: :bar)
+      |> Parser.do_forward(__MODULE__)
+
+      assert last.x[0] == :baz
+    end
+
+    test "will pass through metadata that doesn't match" do
+      %{histories: [[last | _]]} = [{:meta_matched, :bar}]
+      |> Parser.new(foo: :baz)
+      |> Parser.do_forward(__MODULE__)
+
+      assert last.x[0] == :quux
+    end
+  end
+
 end

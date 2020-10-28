@@ -3,7 +3,7 @@ defmodule Type.Inference.Registers do
   struct which represents register tracking in the virtual machine
   """
 
-  defstruct @enforce_keys ++ [x: %{}, y: %{}]
+  defstruct [x: %{}, y: %{}]
 
   @type t :: %__MODULE__{
     x: %{integer => Type.t},

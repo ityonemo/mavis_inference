@@ -1,5 +1,10 @@
 defmodule Type.Inference.Macros do
 
+  @moduledoc """
+  ## options:
+  - debug_dump_code: if true then dumps the code at the end.
+  """
+
   defp macro_inspect(code_ast, label \\ nil) do
     prefix = if label, do: "\n#{label}: ", else: ""
     IO.puts(prefix <> Macro.to_string(code_ast))
@@ -78,7 +83,7 @@ defmodule Type.Inference.Macros do
     # retrieve the opcode.
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
-    |> filter_params([state_param_ast, code_ast])
+    |> filter_params([state_param_ast, code_ast, meta_ast])
     |> assemble(state_param_ast, meta_ast, code_ast, :forward)
     |> Macro.escape
     |> stash(:forward)
@@ -97,7 +102,7 @@ defmodule Type.Inference.Macros do
     # retrieve the opcode.
     __CALLER__.module
     |> Module.get_attribute(:current_opcode)
-    |> filter_params([state_param_ast, code_ast])
+    |> filter_params([state_param_ast, code_ast, meta_ast])
     |> assemble(state_param_ast, meta_ast, code_ast, :backprop)
     |> Macro.escape
     |> stash(:backprop)
@@ -120,6 +125,7 @@ defmodule Type.Inference.Macros do
     warning = case opts[:warn] do
       true -> make_warn("the method #{symbol} for opcode #{Macro.to_string opcode_ast} is not implemented.")
       nil -> nil
+      false -> nil
       _ -> make_warn(opts[:warn])
     end
 
