@@ -111,12 +111,10 @@ defmodule Type.Inference.Block.Parser do
 
   @spec do_forward(t, op_module) :: t
   def do_forward(state, opcode_modules \\ @default_opcode_modules)
-  def do_forward(state = %{code: [instr | _]}, opcode_modules) do
-    # apply the forward operation on the shard.
-
+  def do_forward(state = %{code: [opcode | _]}, opcode_modules) do
     new_histories = Enum.flat_map(state.histories,
       fn history = [latest | earlier] ->
-        case reduce_forward(instr, latest, opcode_modules) do
+        case reduce_forward(opcode, latest, opcode_modules) do
           {:ok, new_vm} -> [[new_vm | history]]
           {:backprop, replacement_vms} ->
             do_all_backprop(state,
@@ -124,13 +122,15 @@ defmodule Type.Inference.Block.Parser do
                             earlier,
                             opcode_modules)
           :no_return -> []
+          :unknown ->
+            raise Type.UnknownOpcodeError, opcode: opcode
         end
       end)
 
     advance(state, new_histories)
   end
 
-  @spec reduce_forward(term, Vm.t, op_module) :: {:ok, Vm.t} | {:backprop, [Vm.t]} | :no_return
+  @spec reduce_forward(term, Vm.t, op_module) :: {:ok, Vm.t} | {:backprop, [Vm.t]} | :no_return | :unknown
   defp reduce_forward(instr, latest, opcode_modules) do
     opcode_modules
     |> List.wrap
