@@ -42,7 +42,13 @@ defmodule Type.Inference.Opcodes.Calls do
     backprop :terminal
   end
 
-  opcode {:call_ext_only, _arity1, {:extfunc, _mod, _fun, _arity2}}, :unimplemented
+  opcode {:call_ext_only, _arity1, {:extfunc, mod, fun, arity}} do
+    forward(state, _meta, ...) do
+      
+      raise "foo"
+    end
+    backprop :terminal
+  end
 
   opcode {:call_only, _arity1, {_this_module, function, arity}} do
     forward(state, _meta, ...) do

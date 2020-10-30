@@ -34,8 +34,9 @@ defmodule Type.Inference do
     end
   end
 
-  def fetch_block(module, fun, arity, inference \\ __MODULE__) do
-    case inference.infer(module, fun, arity) do
+  def fetch_block(module, fun, arity, inference_module! \\ __MODULE__) do
+    inference_module! = Application.get_env(:mavis, :inference, inference_module!)
+    case inference_module!.infer(module, fun, arity) do
       {:ok, spec} -> Type.Inference.Block.from_spec(spec)
       error -> error
     end
