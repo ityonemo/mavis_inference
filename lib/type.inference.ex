@@ -17,6 +17,8 @@ defmodule Type.Inference do
 
   ## API implementation
   @info_parts [:module, :name, :arity, :env]
+
+  # TODO: DEMOTE THIS FUNCTION FROM HERE AND PUT INTO Mavis, instead.
   def infer(lambda) when is_function(lambda) do
     [module, fun, arity, _env] = lambda
     |> :erlang.fun_info
@@ -31,7 +33,10 @@ defmodule Type.Inference do
       }}
     end
   end
-  def infer({module, fun, arity}) do
+  def infer({module, fun, arity}), do: infer(module, fun, arity)
+
+  @spec infer(module, atom, arity) :: {:ok, Type.t} | :unknown
+  def infer(module, fun, arity) do
     fa = {fun, arity}
     with {^module, binary, _filepath} <- :code.get_object_code(module),
          {:ok, mod_struct} <- Type.Inference.Module.from_binary(binary),

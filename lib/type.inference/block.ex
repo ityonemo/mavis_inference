@@ -24,6 +24,27 @@ defmodule Type.Inference.Block do
     |> Enum.into(%Type.Union{})
   end
 
+  @spec from_spec(Type.Function.t | Type.Union.t) :: {:ok, [t]} | {:error, term}
+  def from_spec(%Type.Function{params: p, return: r}) do
+    needs = p
+    |> Enum.with_index
+    |> Enum.map(fn {t, i} -> {i, t} end)
+    |> Enum.into(%{})
+
+    {:ok, [%__MODULE__{needs: needs, makes: r}]}
+  end
+  def from_spec(%Type.Union{of: funs}) do
+    Enum.flat_map(funs, &(case from_spec(&1) do
+      {:ok, [spec]} -> [spec]
+      error = {:error, _} -> throw error
+    end))
+  catch
+    error -> error
+  end
+  def from_spec(_spec) do
+    {:error, "invalid typespec"}
+  end
+
   defp get_params(%{needs: needs}) when needs == %{}, do: []
   defp get_params(block) do
     max_key = block.needs
