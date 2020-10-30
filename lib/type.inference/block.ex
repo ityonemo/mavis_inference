@@ -34,10 +34,10 @@ defmodule Type.Inference.Block do
     {:ok, [%__MODULE__{needs: needs, makes: r}]}
   end
   def from_spec(%Type.Union{of: funs}) do
-    Enum.flat_map(funs, &(case from_spec(&1) do
+    {:ok, Enum.flat_map(funs, &(case from_spec(&1) do
       {:ok, [spec]} -> [spec]
       error = {:error, _} -> throw error
-    end))
+    end))}
   catch
     error -> error
   end
