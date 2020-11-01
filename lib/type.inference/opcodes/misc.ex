@@ -4,4 +4,9 @@ defmodule Type.Inference.Opcodes.Misc do
 
   opcode {:line, _}, :noop
 
+  opcode {:allocate, _, _}, :noop
+
+  opcode {:init, _}, :noop
+
+  opcode {:test_heap, _, _}, :noop
 end

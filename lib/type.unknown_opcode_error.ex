@@ -1,7 +1,12 @@
 defmodule Type.UnknownOpcodeError do
-  defexception [:opcode, :code_block]
+  defexception [:opcode, :code_block, :mfa]
 
   @impl true
+  def message(msg = %{mfa: {m, f, a}}) do
+    """
+    from #{inspect m}.#{f}./#{a}:
+    """ <> message(Map.delete(msg, :mfa))
+  end
   def message(%{opcode: opcode, code_block: code_block})
       when not is_nil(code_block) do
     """

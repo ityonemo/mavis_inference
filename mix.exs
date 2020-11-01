@@ -23,7 +23,7 @@ defmodule MavisInference.MixProject do
 
   defp deps do
     [
-      {:mavis, "~> 0.0.2"}
+      {:mavis, path: "../mavis"} #"~> 0.0.3"}
     ]
   end
 end

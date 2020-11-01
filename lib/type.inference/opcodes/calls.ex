@@ -8,41 +8,12 @@ defmodule Type.Inference.Opcodes.Calls do
   # MOVE SEMANTICS
   @operands [:module, :exports, :attributes, :compile, :native, :md5]
 
-  # THESE OPCODES ARE TEMPORARY.  Let's get just something working first.
-  opcode {:call_ext_only, _arity, {:extfunc, :erlang, :get_module_info, 1}} do
-    forward(state, _meta, ...) do
-      if is_map_key(state.x, 0) do
-        {:ok, put_reg(state, 0, builtin(:keyword))}
-      else
-        {:backprop, [put_reg(state, 0, builtin(:module))]}
-      end
+  opcode {:call_ext_only, _arity1, {:extfunc, mod, fun, arity}} do
+    forward(_state, _meta, ...) do
+      Type.Inference.fetch_block(mod, fun, arity)
     end
     backprop :terminal
   end
-
-  opcode {:call_ext_only, _arity, {:extfunc, :erlang, :get_module_info, 2}} do
-    forward(state, _meta, ...) do
-      cond do
-        not is_map_key(state.x, 0) ->
-          {:backprop, [put_reg(state, 0, builtin(:module))]}
-        not is_map_key(state.x, 1) ->
-          {:backprop, Enum.map(@operands, &put_reg(state, 1, &1))}
-        true ->
-          case state.x[1] do
-            :module -> {:ok, put_reg(state, 0, builtin(:module))}
-            :exports -> {:ok, put_reg(state, 0, builtin(:keyword))}
-            :attributes -> {:ok, put_reg(state, 0, builtin(:keyword))}
-            :compile -> {:ok, put_reg(state, 0, builtin(:keyword))}
-            :native -> {:ok, put_reg(state, 0, builtin(:boolean))}
-            :md5 -> {:ok, put_reg(state, 0, %Type.Bitstring{size: 16 * 8})}
-            _ -> {:backprop, Enum.map(@operands, &put_reg(state, 1, &1))}
-          end
-      end
-    end
-    backprop :terminal
-  end
-
-  opcode {:call_ext_only, _arity1, {:extfunc, _mod, _fun, _arity2}}, :unimplemented
 
   opcode {:call_only, _arity1, {_this_module, function, arity}} do
     forward(state, _meta, ...) do
