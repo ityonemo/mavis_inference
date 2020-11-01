@@ -8,7 +8,7 @@ defmodule Type.Inference.Opcodes.Move do
 
   opcode {:move, from = {:x, _}, to} do
     forward(state, _meta, ...) do
-      if is_reg(state, from) do
+      if is_defined(state, from) do
         {:ok, put_reg(state, to, fetch_type(state, from))}
       else
         # we don't, a priori know what the datatype here is.

@@ -43,10 +43,10 @@ defmodule TypeTest.Abstract.OpcodeTest do
     opcode :combiner do
       forward(state, _meta, ...) do
         cond do
-          not is_reg(state, {:x, 0}) ->
+          not is_defined(state, {:x, 0}) ->
             {:backprop, [put_reg(state, {:x, 0}, :foo),
                          put_reg(state, {:x, 0}, :bar)]}
-          not is_reg(state, {:x, 1}) ->
+          not is_defined(state, {:x, 1}) ->
             {:backprop, [put_reg(state, {:x, 1}, :foo),
                          put_reg(state, {:x, 1}, :bar)]}
           true ->
@@ -73,7 +73,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
     opcode :filter do
       forward(state, _meta, ...) do
         cond do
-          not is_reg(state, {:x, 0}) ->
+          not is_defined(state, {:x, 0}) ->
             {:backprop, [put_reg(state, {:x, 0}, :foo)]}
           true ->
             {:ok, state}

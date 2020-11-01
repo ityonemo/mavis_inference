@@ -6,7 +6,7 @@ defmodule Type.Inference.Opcodes.GcBif do
 
   opcode {:gc_bif, :bit_size, _, _, [from], to} do
     forward(state, _meta, ...) do
-      if is_reg(state, from) do
+      if is_defined(state, from) do
         {:ok, put_reg(state, to, builtin(:non_neg_integer))}
       else
         prev_state = state
@@ -53,13 +53,13 @@ defmodule Type.Inference.Opcodes.GcBif do
     forward(state, _meta, ...) do
       cond do
         # TODO: make this a guard.
-        not is_reg(state, left) ->
+        not is_defined(state, left) ->
           {:backprop, Enum.map(@int_types ++ @num_types, &put_reg(state, left, &1))}
-        not is_reg(state, right) and fetch_type(state, left) in @int_types ->
+        not is_defined(state, right) and fetch_type(state, left) in @int_types ->
           {:backprop, Enum.map(@int_types, &put_reg(state, right, &1))}
-        not is_reg(state, right) and fetch_type(state, left) == builtin(:float) ->
+        not is_defined(state, right) and fetch_type(state, left) == builtin(:float) ->
           {:backprop, [put_reg(state, right, builtin(:float)), put_reg(state, right, builtin(:integer))]}
-        not is_reg(state, right) and fetch_type(state, left) == builtin(:integer) ->
+        not is_defined(state, right) and fetch_type(state, left) == builtin(:integer) ->
           {:backprop, [put_reg(state, right, builtin(:float))]}
         true ->
           ltype = fetch_type(state, left)

@@ -18,7 +18,7 @@ defmodule Type.Inference.Opcodes.Terminal do
       end)
       |> Enum.into(%{})
 
-      if is_reg(state, from) do
+      if is_defined(state, from) do
         jump_reg = fetch_type(state, from)
 
         result_type = ParallelParser.obtain_label(select_table[jump_reg])
@@ -69,7 +69,7 @@ defmodule Type.Inference.Opcodes.Terminal do
     forward(state, _meta, ...) do
       [jump_blk] = ParallelParser.obtain_label(dest)
 
-      if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_reg(state, {:x, &1}))) do
+      if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(state, {:x, &1}))) do
         {:backprop, [put_reg(state, reg, jump_blk.needs[reg])]}
       else
         {:ok, put_reg(state, {:x, 0}, jump_blk.makes)}

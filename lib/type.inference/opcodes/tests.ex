@@ -16,7 +16,7 @@ defmodule Type.Inference.Opcodes.Tests do
       jump_block = ParallelParser.obtain_label(fail)
 
       cond do
-        not is_reg(state, from) ->
+        not is_defined(state, from) ->
           jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
           {:backprop, [put_reg(state, from, nil) | jump_needs]}
         fetch_type(state, from) == nil ->
@@ -36,7 +36,7 @@ defmodule Type.Inference.Opcodes.Tests do
       jump_block = ParallelParser.obtain_label(fail)
 
       cond do
-        not is_reg(state, from) ->
+        not is_defined(state, from) ->
           jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
           {:backprop, [put_reg(state, from, builtin(:boolean)) | jump_needs]}
         Type.usable_as(fetch_type(state, from), builtin(:boolean)) == :ok ->
@@ -55,7 +55,7 @@ defmodule Type.Inference.Opcodes.Tests do
       jump_block = ParallelParser.obtain_label(fail)
 
       cond do
-        ! is_reg(state, from) ->
+        ! is_defined(state, from) ->
           jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
           {:backprop, [put_reg(state, from, %Type.List{nonempty: true, type: builtin(:any)}) | jump_needs]}
         match?(%Type.List{nonempty: true}, fetch_type(state, from)) ->
@@ -76,7 +76,7 @@ defmodule Type.Inference.Opcodes.Tests do
       [jump_res] = jump_block
 
       cond do
-        ! is_reg(state, fun) ->
+        ! is_defined(state, fun) ->
           params = List.duplicate(builtin(:any), arity)
           jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
           {:backprop, [put_reg(state, fun, %Type.Function{params: params, return: builtin(:any)}) | jump_needs]}
@@ -97,9 +97,9 @@ defmodule Type.Inference.Opcodes.Tests do
       [jump_res] = jump_block
 
       cond do
-        ! is_reg(state, left) ->
+        ! is_defined(state, left) ->
           {:backprop, [put_reg(state, left, builtin(:any))]}
-        ! is_reg(state, right) ->
+        ! is_defined(state, right) ->
           {:backprop, [put_reg(state, right, builtin(:any))]}
         is_singleton(fetch_type(state, left)) and fetch_type(state, left) == fetch_type(state, right) ->
           {:ok, state}
@@ -117,11 +117,11 @@ defmodule Type.Inference.Opcodes.Tests do
     forward(state, _meta, ...) do
       jump_block = ParallelParser.obtain_label(fail)
       [jump_res] = jump_block
-      
+
       cond do
-        ! is_reg(state, left) ->
+        ! is_defined(state, left) ->
           {:backprop, [put_reg(state, left, builtin(:any))]}
-        ! is_reg(state, right) ->
+        ! is_defined(state, right) ->
           {:backprop, [put_reg(state, right, builtin(:any))]}
         true ->
           {:ok, [state, freeze: put_reg(state, {:x, 0}, jump_res.makes)]}
