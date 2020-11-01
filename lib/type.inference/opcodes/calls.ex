@@ -25,7 +25,7 @@ defmodule Type.Inference.Opcodes.Calls do
       |> Map.keys
       |> Enum.all?(&(&1 in Map.keys(state.x)))
       |> if do
-        {:ok, put_reg(state, 0, lookup.makes)}
+        {:ok, put_reg(state, {:x, 0}, lookup.makes)}
       else
         {:backprop, [merge_reg(state, lookup.needs)]}
       end

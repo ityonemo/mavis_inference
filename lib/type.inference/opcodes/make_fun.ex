@@ -12,7 +12,7 @@ defmodule Type.Inference.Opcodes.MakeFun do
       |> ParallelParser.obtain_call(arity)
       |> Type.Inference.Block.to_function
 
-      {:ok, put_reg(state, 0, return)}
+      {:ok, put_reg(state, {:x, 0}, return)}
     end
 
     forward :unimplemented

@@ -18,8 +18,8 @@ defmodule TypeTest.Abstract.OpcodeTest do
       forward(state, _meta, ...) do
         if state.x == %{} do
           {:backprop, [
-            put_reg(state, 0, builtin(:integer)),
-            put_reg(state, 0, builtin(:atom))]}
+            put_reg(state, {:x, 0}, builtin(:integer)),
+            put_reg(state, {:x, 0}, builtin(:atom))]}
         else
           {:ok, state}
         end
@@ -43,10 +43,12 @@ defmodule TypeTest.Abstract.OpcodeTest do
     opcode :combiner do
       forward(state, _meta, ...) do
         cond do
-          not is_map_key(state.x, 0) ->
-            {:backprop, [put_reg(state, 0, :foo), put_reg(state, 0, :bar)]}
-          not is_map_key(state.x, 1) ->
-            {:backprop, [put_reg(state, 1, :foo), put_reg(state, 1, :bar)]}
+          not is_reg(state, {:x, 0}) ->
+            {:backprop, [put_reg(state, {:x, 0}, :foo),
+                         put_reg(state, {:x, 0}, :bar)]}
+          not is_reg(state, {:x, 1}) ->
+            {:backprop, [put_reg(state, {:x, 1}, :foo),
+                         put_reg(state, {:x, 1}, :bar)]}
           true ->
             {:ok, state}
         end
@@ -71,8 +73,8 @@ defmodule TypeTest.Abstract.OpcodeTest do
     opcode :filter do
       forward(state, _meta, ...) do
         cond do
-          not is_map_key(state.x, 0) ->
-            {:backprop, [put_reg(state, 0, :foo)]}
+          not is_reg(state, {:x, 0}) ->
+            {:backprop, [put_reg(state, {:x, 0}, :foo)]}
           true ->
             {:ok, state}
         end

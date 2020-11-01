@@ -4,9 +4,9 @@ defmodule Type.Inference.Opcodes.GcBif do
 
   use Type.Inference.Macros
 
-  opcode {:gc_bif, :bit_size, _, _, [x: from], {:x, to}} do
+  opcode {:gc_bif, :bit_size, _, _, [from], to} do
     forward(state, _meta, ...) do
-      if is_map_key(state.x, from) do
+      if is_reg(state, from) do
         {:ok, put_reg(state, to, builtin(:non_neg_integer))}
       else
         prev_state = state
@@ -18,7 +18,7 @@ defmodule Type.Inference.Opcodes.GcBif do
     end
 
     backprop(state, _meta, ...) do
-      if Type.subtype?(get_reg(state, to), builtin(:non_neg_integer)) do
+      if Type.subtype?(fetch_type(state, to), builtin(:non_neg_integer)) do
         {:ok, [put_reg(state, from, %Type.Bitstring{size: 0, unit: 1})]}
       else
         {:ok, []}
@@ -49,21 +49,21 @@ defmodule Type.Inference.Opcodes.GcBif do
   defp do_add(t, builtin(:integer)) when t in @all_int_types,        do: builtin(:integer)
   defp do_add(builtin(:integer), t) when t in @all_int_types,        do: builtin(:integer)
 
-  opcode {:gc_bif, :+, _, 2, [x: left, x: right], {:x, to}} do
+  opcode {:gc_bif, :+, _, 2, [left, right], to} do
     forward(state, _meta, ...) do
       cond do
         # TODO: make this a guard.
-        not is_map_key(state.x, left) ->
+        not is_reg(state, left) ->
           {:backprop, Enum.map(@int_types ++ @num_types, &put_reg(state, left, &1))}
-        not is_map_key(state.x, right) and get_reg(state, left) in @int_types ->
+        not is_reg(state, right) and fetch_type(state, left) in @int_types ->
           {:backprop, Enum.map(@int_types, &put_reg(state, right, &1))}
-        not is_map_key(state.x, right) and get_reg(state, left) == builtin(:float) ->
+        not is_reg(state, right) and fetch_type(state, left) == builtin(:float) ->
           {:backprop, [put_reg(state, right, builtin(:float)), put_reg(state, right, builtin(:integer))]}
-        not is_map_key(state.x, right) and get_reg(state, left) == builtin(:integer) ->
+        not is_reg(state, right) and fetch_type(state, left) == builtin(:integer) ->
           {:backprop, [put_reg(state, right, builtin(:float))]}
         true ->
-          ltype = get_reg(state, left)
-          rtype = get_reg(state, right)
+          ltype = fetch_type(state, left)
+          rtype = fetch_type(state, right)
           res = do_add(ltype, rtype)
           {:ok, put_reg(state, to, res)}
       end
