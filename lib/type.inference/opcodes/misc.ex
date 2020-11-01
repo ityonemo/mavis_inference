@@ -16,4 +16,6 @@ defmodule Type.Inference.Opcodes.Misc do
 
   opcode {:test_heap, _, _}, :noop
 
+  opcode {:deallocate}, :noop
+
 end

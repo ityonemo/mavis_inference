@@ -139,6 +139,8 @@ defmodule Type.Inference.Opcodes.Tests do
           {:backprop, [put_reg(state, right, builtin(:any))]}
         is_singleton(fetch_type(state, left)) and fetch_type(state, left) == fetch_type(state, right) ->
           {:ok, state}
+        is_singleton(fetch_type(state, left)) and is_singleton(fetch_type(state, right)) ->
+          {:ok, freeze: put_reg(state, left, jump_res.makes)}
         Type.intersection(fetch_type(state, left), fetch_type(state, right)) == builtin(:none) ->
           {:ok, freeze: put_reg(state, left, jump_res.makes)}
         true ->
@@ -159,6 +161,30 @@ defmodule Type.Inference.Opcodes.Tests do
           {:backprop, [put_reg(state, left, builtin(:any))]}
         ! is_defined(state, right) ->
           {:backprop, [put_reg(state, right, builtin(:any))]}
+        true ->
+          {:ok, [state, freeze: put_reg(state, {:x, 0}, jump_res.makes)]}
+      end
+    end
+
+    backprop :terminal
+  end
+
+  opcode {:test, :is_ne, {:f, fail}, [left, right]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+      [jump_res] = jump_block
+
+      cond do
+        ! is_defined(state, left) ->
+          {:backprop, [put_reg(state, left, builtin(:any))]}
+        ! is_defined(state, right) ->
+          {:backprop, [put_reg(state, right, builtin(:any))]}
+        is_singleton(fetch_type(state, left)) and fetch_type(state, left) == fetch_type(state, right) ->
+          {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
+        is_singleton(fetch_type(state, left)) and is_singleton(fetch_type(state, right)) ->
+          {:ok, state}
+        Type.intersection(fetch_type(state, left), fetch_type(state, right)) == builtin(:none) ->
+          {:ok, state}
         true ->
           {:ok, [state, freeze: put_reg(state, {:x, 0}, jump_res.makes)]}
       end
