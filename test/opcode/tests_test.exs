@@ -71,6 +71,69 @@ defmodule TypeTest.Opcode.TestsTest do
     test "passes needs through a backpropagation"
   end
 
+  describe "is_boolean opcode" do
+    @op_is_bool {:test, :is_boolean, {:f, 10}, [x: 0]}
+    @op_is_bool_all [@op_is_bool, @op_set0]
+
+    test "forward propagates the type on true" do
+      state = @op_is_bool_all
+      |> Parser.new(preload: %{0 => true})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => true}} = history_start(state)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type on false" do
+      state = @op_is_bool_all
+      |> Parser.new(preload: %{0 => false})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => false}} = history_start(state)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type on boolean" do
+      state = @op_is_bool_all
+      |> Parser.new(preload: %{0 => builtin(:boolean)})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => builtin(:boolean)}} = history_start(state)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type that matches the jump condition" do
+      state = @op_is_bool_all
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+
+      final = fast_forward(state)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the test register" do
+      state = @op_is_bool_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %Registers{x: %{0 => builtin(:boolean)}} = history_start(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
   describe "is_nonempty_list opcode" do
     @op_is_nel {:test, :is_nonempty_list, {:f, 10}, [x: 0]}
     @op_is_nel_all [@op_is_nel, @op_set0]
@@ -162,7 +225,6 @@ defmodule TypeTest.Opcode.TestsTest do
 
     test "passes needs through a backpropagation"
   end
-
 
   test "make is_eq_exact operate on arbitrary types of things"
 
