@@ -6,6 +6,8 @@ defmodule Type.Inference.Opcodes.Misc do
 
   opcode {:allocate, _, _}, :noop
 
+  opcode {:allocate_zero, _, _}, :noop
+
   opcode {:init, _}, :noop
 
   opcode {:test_heap, _, _}, :noop

@@ -30,6 +30,25 @@ defmodule Type.Inference.Opcodes.Tests do
     backprop :terminal
   end
 
+  opcode {:test, :is_nonempty_list, {:f, fail}, [x: from]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+
+      cond do
+        ! is_map_key(state.x, from) ->
+          jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
+          {:backprop, [put_reg(state, from, %Type.List{nonempty: true, type: builtin(:any)}) | jump_needs]}
+        match?(%Type.List{nonempty: true}, get_reg(state, 0)) ->
+          {:ok, state}
+        true ->
+          [jump_res] = jump_block
+          {:ok, freeze: put_reg(state, 0, jump_res.makes)}
+      end
+    end
+
+    backprop :terminal
+  end
+
   # TODO: put this into mavis.
   defguard is_singleton(value) when is_atom(value) or is_integer(value)
 
