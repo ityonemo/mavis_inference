@@ -112,4 +112,22 @@ defmodule Type.Inference.Opcodes.Tests do
 
     backprop :terminal
   end
+
+  opcode {:test, :is_lt, {:f, fail}, [left, right]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+      [jump_res] = jump_block
+      
+      cond do
+        ! is_reg(state, left) ->
+          {:backprop, [put_reg(state, left, builtin(:any))]}
+        ! is_reg(state, right) ->
+          {:backprop, [put_reg(state, right, builtin(:any))]}
+        true ->
+          {:ok, [state, freeze: put_reg(state, {:x, 0}, jump_res.makes)]}
+      end
+    end
+
+    backprop :terminal
+  end
 end

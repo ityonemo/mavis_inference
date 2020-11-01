@@ -283,4 +283,38 @@ defmodule TypeTest.Opcode.TestsTest do
     test "passes needs through a backpropagation"
   end
 
+  describe "is_lt opcode" do
+    @op_is_lt {:test, :is_lt, {:f, 10}, [x: 0, x: 1]}
+    @op_is_lt_all [@op_is_lt, @op_set0]
+
+    test "forward propagates both always" do
+      state = @op_is_lt_all
+      |> Parser.new(preload: %{0 => builtin(:integer), 1 => builtin(:pid)})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:pid)}} = history_start(state)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+
+      assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:pid)}} = history_start(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates any() when content is missing for either register" do
+      state = @op_is_lt_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %Registers{x: %{0 => builtin(:any), 1 => builtin(:any)}} = history_start(state, 0)
+      assert %Registers{x: %{0 => builtin(:any), 1 => builtin(:any)}} = history_start(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
 end
