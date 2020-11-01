@@ -58,9 +58,9 @@ defmodule Type.Inference.Opcodes.Tests do
       [jump_res] = jump_block
 
       cond do
-        ! is_reg(state.x, left) ->
+        ! is_reg(state, left) ->
           {:backprop, [put_reg(state, left, builtin(:any))]}
-        ! is_reg(state.x, right) ->
+        ! is_reg(state, right) ->
           {:backprop, [put_reg(state, right, builtin(:any))]}
         is_singleton(fetch_type(state, left)) and fetch_type(state, left) == fetch_type(state, right) ->
           {:ok, state}
