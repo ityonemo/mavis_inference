@@ -71,7 +71,8 @@ defmodule Type.Inference.Block.Parser do
   @type history :: [Registers.t]
   @type metadata :: %{
     required(:module) => module,
-    optional(:fa) => {atom, arity}
+    optional(:fa) => {atom, arity},
+    optional(:log) => boolean
   }
 
   @type t :: %__MODULE__{
@@ -116,9 +117,11 @@ defmodule Type.Inference.Block.Parser do
   @default_opcode_modules [
     Type.Inference.Opcodes.Calls,
     Type.Inference.Opcodes.GcBif,
+    Type.Inference.Opcodes.Gets,
     Type.Inference.Opcodes.MakeFun,
     Type.Inference.Opcodes.Misc,
     Type.Inference.Opcodes.Move,
+    Type.Inference.Opcodes.Tests,
     Type.Inference.Opcodes.Terminal]
 
   @spec do_analyze(t, op_module) :: t
@@ -140,10 +143,10 @@ defmodule Type.Inference.Block.Parser do
         |> reduce_forward(latest, state.meta, opcode_modules)
         |> validate_forward  # prevents stupid mistakes
         |> case do
-          {:ok, new_vm} -> [[new_vm | history]]
-          {:backprop, replacement_vms} ->
+          {:ok, new_regs} -> prep_ok(new_regs, length(state.stack), history)
+          {:backprop, replacement_regs} ->
             do_all_backprop(state,
-                            replacement_vms,
+                            replacement_regs,
                             earlier,
                             opcode_modules)
           :no_return -> []
@@ -155,7 +158,24 @@ defmodule Type.Inference.Block.Parser do
     advance(state, new_histories)
   end
 
-  @spec reduce_forward(term, Registers.t, map, op_module) :: {:ok, Registers.t} | {:backprop, [Registers.t]} | :no_return | :unknown
+  defp prep_ok(new_regs, location, history) when is_list(new_regs) do
+    Enum.map(new_regs, fn
+      {:freeze, regs} -> [%{regs | freeze: location} | history]
+      regs -> [regs | history]
+    end)
+  end
+  defp prep_ok(new_regs, location, history), do: prep_ok([new_regs], location, history)
+
+  @spec reduce_forward(term, Registers.t, map, op_module) ::
+    {:ok, Registers.t} |
+    {:ok, [Registers.t | {:freeze, Registers.t}]} |
+    {:backprop, [Registers.t]} |
+    :no_return |
+    :unknown
+
+  # ignore frozen register histories.
+  defp reduce_forward(_instr, latest = %{freeze: freeze}, _meta, _mods)
+    when is_integer(freeze), do: {:ok, latest}
   defp reduce_forward(instr, latest, meta, opcode_modules) do
     opcode_modules
     |> List.wrap
@@ -237,6 +257,8 @@ defmodule Type.Inference.Block.Parser do
 
   if Mix.env() == :test do
     defp validate_forward(fwd = {:ok, %Registers{}}), do: fwd
+    defp validate_forward(fwd = {:ok, [%Registers{} | _]}), do: fwd
+    defp validate_forward(fwd = {:ok, [{:freeze, %Registers{}} | _]}), do: fwd
     defp validate_forward(bck = {:backprop, [%Registers{} | _]}), do: bck
     defp validate_forward(bck = {:backprop, []}), do: bck
     defp validate_forward(:no_return), do: :no_return

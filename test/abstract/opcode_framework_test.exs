@@ -171,4 +171,7 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
     end
   end
 
+  test "an opcode that freezes"
+
+  test "an opcode that does dual histories"
 end
