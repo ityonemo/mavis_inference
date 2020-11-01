@@ -16,10 +16,10 @@ defmodule Type.Inference.Opcodes.Tests do
       jump_block = ParallelParser.obtain_label(fail)
 
       cond do
-        not is_reg(state.x, from) ->
+        not is_reg(state, from) ->
           jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
           {:backprop, [put_reg(state, from, nil) | jump_needs]}
-        state.x[from] == nil ->
+        fetch_type(state, from) == nil ->
           {:ok, state}
         true ->
           [jump_res] = jump_block
@@ -49,6 +49,25 @@ defmodule Type.Inference.Opcodes.Tests do
     backprop :terminal
   end
 
+
+  opcode {:test, :is_function_2, {:f, fail}, [fun, integer: arity]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+      [jump_res] = jump_block
+
+      cond do
+        ! is_reg(state, fun) ->
+          params = List.duplicate(builtin(:any), arity)
+          jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
+          {:backprop, [put_reg(state, fun, %Type.Function{params: params, return: builtin(:any)}) | jump_needs]}
+        match?(%Type.Function{params: params} when length(params) == arity, fetch_type(state, fun)) ->
+          {:ok, state}
+        true ->
+          {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
+      end
+    end
+  end
+
   # TODO: put this into mavis.
   defguard is_singleton(value) when is_atom(value) or is_integer(value)
 
@@ -73,5 +92,4 @@ defmodule Type.Inference.Opcodes.Tests do
 
     backprop :terminal
   end
-
 end

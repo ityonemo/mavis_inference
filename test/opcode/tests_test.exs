@@ -117,7 +117,51 @@ defmodule TypeTest.Opcode.TestsTest do
     test "passes needs through a backpropagation"
   end
 
+  describe "is_function_2 opcode" do
+    @op_is_f2_1 {:test, :is_function_2, {:f, 10}, [x: 0, integer: 1]}
+    @op_is_f2_1_all [@op_is_f2_1, @op_set0]
+    @function_1 %Type.Function{params: [builtin(:any)], return: builtin(:any)}
 
+    test "forward propagates the type on correct-arity function" do
+      state = @op_is_f2_1_all
+      |> Parser.new(preload: %{0 => @function_1})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => @function_1}} = history_start(state)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type that matches the jump condition" do
+      state = @op_is_f2_1_all
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+
+      final = fast_forward(state)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the test register" do
+      state = @op_is_f2_1_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %Registers{x: %{0 => %Type.Function{params: [builtin(:any)], return: builtin(:any)}}} = history_start(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
 
 
   test "make is_eq_exact operate on arbitrary types of things"
