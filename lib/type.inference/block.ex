@@ -121,6 +121,7 @@ defmodule Type.Inference.Block.Parser do
     Type.Inference.Opcodes.MakeFun,
     Type.Inference.Opcodes.Misc,
     Type.Inference.Opcodes.Move,
+    Type.Inference.Opcodes.Puts,
     Type.Inference.Opcodes.Tests,
     Type.Inference.Opcodes.Terminal]
 

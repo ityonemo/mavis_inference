@@ -22,7 +22,7 @@ defmodule Type.Inference.Macros do
 
       import Type.Inference.Macros, only: [
         opcode: 2, forward: 4, forward: 1, backprop: 4, backprop: 1,
-        put_reg: 3, get_reg: 2, merge_reg: 2, tombstone: 2]
+        put_reg: 3, fetch_type: 2, merge_reg: 2, tombstone: 2, is_defined: 2]
 
       Module.register_attribute(__MODULE__, :forward, accumulate: true)
       Module.register_attribute(__MODULE__, :backprop, accumulate: true)
@@ -157,12 +157,24 @@ defmodule Type.Inference.Macros do
   end
 
   # exports
-  def put_reg(state, reg, type) do
-    %{state | x: Map.put(state.x, reg, type)}
+  defguard is_defined(state, reg) when
+    is_nil(reg) or
+    (is_tuple(reg) and (elem(reg, 0) in [:atom, :integer, :literal])) or
+    (is_tuple(reg) and
+    (reg
+    |> elem(0)
+    |> :erlang.map_get(state)
+    |> is_map_key(elem(reg, 1))))
+
+  def fetch_type(state, {:x, reg}), do: state.x[reg]
+  def fetch_type(state, {:y, reg}), do: state.y[reg]
+  def fetch_type(_state, nil), do: []
+  def fetch_type(_state, {_, value}), do: Type.of(value)
+
+  def put_reg(state, {class, reg}, type) do
+    %{state | class => Map.put(state.x, reg, type)}
   end
-  def get_reg(state, reg) do
-    state.x[reg]
-  end
+
   def merge_reg(state, registers) do
     %{state | x: Map.merge(state.x, registers)}
   end

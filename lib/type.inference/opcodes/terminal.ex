@@ -6,7 +6,7 @@ defmodule Type.Inference.Opcodes.Terminal do
 
   alias Type.Inference.Module.ParallelParser
 
-  opcode {:select_val, {:x, from}, {:f, _fail}, {:list, list}} do
+  opcode {:select_val, from, {:f, _fail}, {:list, list}} do
     forward(state, _meta, ...) do
       # TODO: fix this so that it merges instead of
       # clobbering, for example if we have two String.t's coming
@@ -18,14 +18,14 @@ defmodule Type.Inference.Opcodes.Terminal do
       end)
       |> Enum.into(%{})
 
-      if is_map_key(state.x, from) do
-        jump_reg = get_reg(state, from)
+      if is_defined(state, from) do
+        jump_reg = fetch_type(state, from)
 
         result_type = ParallelParser.obtain_label(select_table[jump_reg])
         |> Enum.map(&(&1.makes))
         |> Type.union()
 
-        {:ok, put_reg(state, 0, result_type)}
+        {:ok, put_reg(state, {:x, 0}, result_type)}
       else
         type_table = select_table
         |> Map.keys
@@ -49,7 +49,7 @@ defmodule Type.Inference.Opcodes.Terminal do
       {:ok, state}
     end
     forward(state = %{x: %{}}, _meta, ...) do
-      {:backprop, [put_reg(state, 0, builtin(:any))]}
+      {:backprop, [put_reg(state, {:x, 0}, builtin(:any))]}
     end
 
     backprop :terminal
@@ -59,7 +59,21 @@ defmodule Type.Inference.Opcodes.Terminal do
 
   opcode {:func_info, _, _, _} do
     forward(state, _meta, ...) do
-      {:ok, put_reg(state, 0, builtin(:none))}
+      {:ok, put_reg(state, {:x, 0}, builtin(:none))}
+    end
+
+    backprop :terminal
+  end
+
+  opcode {:jump, {:f, dest}} do
+    forward(state, _meta, ...) do
+      [jump_blk] = ParallelParser.obtain_label(dest)
+
+      if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(state, {:x, &1}))) do
+        {:backprop, [put_reg(state, reg, jump_blk.needs[reg])]}
+      else
+        {:ok, put_reg(state, {:x, 0}, jump_blk.makes)}
+      end
     end
 
     backprop :terminal

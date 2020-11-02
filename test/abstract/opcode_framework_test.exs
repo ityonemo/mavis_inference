@@ -120,10 +120,10 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
   describe "an opcode with a match in the state" do
     opcode {:matched, match} do
       forward(state = %{x: %{0 => match}}, _meta, ...) do
-        {:ok, put_reg(state, 0, :baz)}
+        {:ok, put_reg(state, {:x,0}, :baz)}
       end
       forward(state, _meta, ...) do
-        {:ok, put_reg(state, 0, :quux)}
+        {:ok, put_reg(state, {:x,0}, :quux)}
       end
     end
 
@@ -147,10 +147,10 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
   describe "an opcode with a match in the metadata" do
     opcode {:meta_matched, match} do
       forward(state, %{foo: match}, ...) do
-        {:ok, put_reg(state, 0, :baz)}
+        {:ok, put_reg(state, {:x, 0}, :baz)}
       end
       forward(state, _meta, ...) do
-        {:ok, put_reg(state, 0, :quux)}
+        {:ok, put_reg(state, {:x, 0}, :quux)}
       end
     end
 

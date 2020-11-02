@@ -6,10 +6,10 @@ defmodule Type.Inference.Opcodes.Move do
 
   # MOVE SEMANTICS
 
-  opcode {:move, {:x, from}, {:x, to}} do
+  opcode {:move, from = {:x, _}, to} do
     forward(state, _meta, ...) do
-      if is_map_key(state.x, from) do
-        {:ok, put_reg(state, to, get_reg(state, from))}
+      if is_defined(state, from) do
+        {:ok, put_reg(state, to, fetch_type(state, from))}
       else
         # we don't, a priori know what the datatype here is.
         {:backprop, [put_reg(state, from, builtin(:any))]}
@@ -18,23 +18,20 @@ defmodule Type.Inference.Opcodes.Move do
 
     backprop(state, _meta, ...) do
       prev_state = state
-      |> put_reg(from, get_reg(state, to))
+      |> put_reg(from, fetch_type(state, to))
       |> tombstone(to)
 
       {:ok, [prev_state]}
     end
   end
 
-  opcode {:move, value, {:x, to}} do
+  opcode {:move, value, to} do
     forward(state, _meta, ...) do
-      {:ok, put_reg(state, to, type_of(value))}
+      {:ok, put_reg(state, to, fetch_type(state, value))}
     end
     backprop(state, _meta, ...) do
       {:ok, [tombstone(state, to)]}
     end
   end
-
-  defp type_of(nil), do: []
-  defp type_of({_, value}), do: Type.of(value)
 
 end
