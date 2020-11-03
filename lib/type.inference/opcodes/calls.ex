@@ -9,8 +9,12 @@ defmodule Type.Inference.Opcodes.Calls do
   @operands [:module, :exports, :attributes, :compile, :native, :md5]
 
   opcode {:call_ext_only, _arity1, {:extfunc, mod, fun, arity}} do
-    forward(_state, _meta, ...) do
-      Type.Inference.fetch_block(mod, fun, arity)
+    forward(_state, meta, ...) do
+      if meta.module == mod do
+        ParallelParser.obtain_call(fun, arity)
+      else
+        Type.Inference.BlockCache.request({mod, fun, arity})
+      end
     end
     backprop :terminal
   end

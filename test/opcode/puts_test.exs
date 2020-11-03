@@ -1,4 +1,4 @@
-defmodule TypeTest.Opcode.PutListTest do
+defmodule TypeTest.Opcode.PutsTest do
 
   #tests on the {:test, x...} opcodes
 

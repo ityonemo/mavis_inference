@@ -26,6 +26,19 @@ defmodule Type.Inference.Module do
 
   alias Type.Inference.Module.ParallelParser
 
+  @spec from_module(module) :: {:ok, t} | {:error, term}
+  def from_module(module) do
+    with {:module, _} <- Code.ensure_loaded(module),
+         {^module, binary, _filepath} <- :code.get_object_code(module),
+         {:ok, mod_struct} <- Type.Inference.Module.from_binary(binary) do
+      mod_struct
+    else
+      :error ->
+        raise "can't operate on in-memory modules"
+      error = {:error, _} -> error
+    end
+  end
+
   @spec from_binary(binary) :: {:ok, t} | {:error, term}
   def from_binary(binary) do
     case :beam_disasm.file(binary) do

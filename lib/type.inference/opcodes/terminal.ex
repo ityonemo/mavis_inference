@@ -78,4 +78,18 @@ defmodule Type.Inference.Opcodes.Terminal do
 
     backprop :terminal
   end
+
+  opcode {:wait, {:f, dest}} do
+    forward(state, _meta, ...) do
+      [jump_blk] = ParallelParser.obtain_label(dest)
+
+      if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(state, {:x, &1}))) do
+        {:backprop, [put_reg(state, reg, jump_blk.needs[reg])]}
+      else
+        {:ok, put_reg(state, {:x, 0}, jump_blk.makes)}
+      end
+    end
+
+    backprop :terminal
+  end
 end

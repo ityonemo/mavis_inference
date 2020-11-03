@@ -106,7 +106,7 @@ defmodule Type.Inference.Opcodes.Tests do
     end
   end
 
-  opcode {:test, :is_function_2, {:f, fail}, [fun, integer: arity]} do
+  opcode {:test, :is_function2, {:f, fail}, [fun, integer: arity]} do
     forward(state, _meta, ...) do
       jump_block = ParallelParser.obtain_label(fail)
       [jump_res] = jump_block

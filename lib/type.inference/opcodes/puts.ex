@@ -31,4 +31,6 @@ defmodule Type.Inference.Opcodes.Puts do
     backprop :terminal
   end
 
+
+#  {:put_tuple2, {:x, 0}, {:list, [atom: :badmap, x: 0]}
 end
