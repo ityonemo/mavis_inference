@@ -5,4 +5,7 @@ defmodule TypeTest.Opcode.VerifyTest do
 
   test "badmatch"
 
+  test "try_case"
+
+  test "case_end"
 end

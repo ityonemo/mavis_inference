@@ -2,6 +2,7 @@ defmodule TypeTest.Opcode.MoveTest do
   # various ways that the move opcode can be a thing
 
   use ExUnit.Case, async: true
+  import TypeTest.OpcodeCase
 
   @moduletag :opcodes
 
@@ -224,4 +225,36 @@ defmodule TypeTest.Opcode.MoveTest do
 
     test "backpropagation errors if there is a conflict"
   end
+
+  describe "the swap opcode" do
+    @op_swp {:swap, {:x, 0}, {:x, 1}}
+    test "swaps the types of the two registers" do
+      assert %{x: %{0 => builtin(:atom), 1 => builtin(:integer)}} = [@op_swp]
+      |> Parser.new(preload: %{0 => builtin(:integer), 1 => builtin(:atom)})
+      |> Parser.do_forward
+      |> history_finish
+    end
+
+    test "backpropagates to require a value in register 0" do
+      state = [@op_swp]
+      |> Parser.new(preload: %{1 => builtin(:atom)})
+      |> Parser.do_forward
+
+      assert %{0 => builtin(:any), 1 => builtin(:atom)} = history_start(state).x
+      assert %{0 => builtin(:atom), 1 => builtin(:any)} = history_finish(state).x
+    end
+
+    test "backpropagates to require both values" do
+      state = [@op_swp]
+      |> Parser.new()
+      |> Parser.do_forward
+
+      assert %{0 => builtin(:any), 1 => builtin(:any)} = history_start(state).x
+      assert %{0 => builtin(:any), 1 => builtin(:any)} = history_finish(state).x
+    end
+
+    test "backpropagates with a swapping operation"
+  end
+
+
 end

@@ -26,4 +26,8 @@ defmodule Type.Inference.Opcodes.Misc do
   # TO BE VERIFIED
   opcode {:badmatch, _}, :noop
 
+  opcode {:try_case, _}, :noop
+
+  opcode {:case_end, _}, :noop
+
 end

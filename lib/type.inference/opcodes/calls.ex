@@ -82,4 +82,18 @@ defmodule Type.Inference.Opcodes.Calls do
 
     backprop :terminal
   end
+
+  opcode {:call_last, _arity1, {mod, fun, arity}, _} do
+    forward(_state, meta, ...) do
+      if meta.module == mod do
+        ParallelParser.obtain_call(fun, arity)
+        |> IO.inspect(label: "57")
+      else
+        Type.Inference.BlockCache.request({mod, fun, arity})
+        |> IO.inspect(label: "60")
+      end
+    end
+
+    backprop :terminal
+  end
 end

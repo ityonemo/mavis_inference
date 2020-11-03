@@ -34,4 +34,23 @@ defmodule Type.Inference.Opcodes.Move do
     end
   end
 
+  opcode {:swap, left, right} do
+    forward(state, _meta, ...) do
+      cond do
+        not is_defined(state, left) ->
+          {:backprop, [put_reg(state, left, builtin(:any))]}
+
+        not is_defined(state, right) ->
+          {:backprop, [put_reg(state, right, builtin(:any))]}
+
+        true ->
+          end_state = state
+          |> put_reg(right, fetch_type(state, left))
+          |> put_reg(left, fetch_type(state, right))
+
+          {:ok, end_state}
+      end
+    end
+  end
+
 end
