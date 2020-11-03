@@ -115,8 +115,9 @@ defmodule Type.Inference.Block.Parser do
   end
 
   @default_opcode_modules [
+    Type.Inference.Opcodes.Bifs,
     Type.Inference.Opcodes.Calls,
-    Type.Inference.Opcodes.GcBif,
+    Type.Inference.Opcodes.GcBifs,
     Type.Inference.Opcodes.Gets,
     Type.Inference.Opcodes.MakeFun,
     Type.Inference.Opcodes.Misc,

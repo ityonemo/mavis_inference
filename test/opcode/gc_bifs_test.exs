@@ -1,8 +1,9 @@
-defmodule TypeTest.Opcode.GcBifTest do
+defmodule TypeTest.Opcode.GcBifsTest do
 
   # various ways that the move opcode can be a thing
 
   use ExUnit.Case, async: true
+  import TypeTest.OpcodeCase
 
   @moduletag :opcodes
 
@@ -14,10 +15,10 @@ defmodule TypeTest.Opcode.GcBifTest do
   describe "when the opcode is the bit_size bif" do
     @bitstring %Type.Bitstring{size: 0, unit: 1}
 
-    @opcode_bitsz {:gc_bif, :bit_size, {:f, 0}, 1, [x: 1], {:x, 0}}
+    @op_bit_sz {:gc_bif, :bit_size, {:f, 0}, 1, [x: 1], {:x, 0}}
 
     test "forward propagates returns non_neg_integer" do
-      state = Parser.new([@opcode_bitsz], preload: %{1 => @bitstring})
+      state = Parser.new([@op_bit_sz], preload: %{1 => @bitstring})
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -30,7 +31,7 @@ defmodule TypeTest.Opcode.GcBifTest do
     test "forward propagates a fixed number if the size is fixed"
 
     test "backpropagates to require a value in register 1" do
-      state = Parser.new([@opcode_bitsz])
+      state = Parser.new([@op_bit_sz])
 
       assert %Parser{histories: [history]} = Parser.do_forward(state)
 
@@ -38,6 +39,31 @@ defmodule TypeTest.Opcode.GcBifTest do
         %Registers{x: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
         %Registers{x: %{1 => @bitstring}}
       ] = history
+    end
+
+    test "errors if incompatible datatypes are provided"
+  end
+
+  describe "when the opcode is the map_size bif" do
+    @any_map %Type.Map{optional: %{builtin(:any) => builtin(:any)}}
+    @op_map_sz {:gc_bif, :map_size, {:f, 0}, 1, [x: 1], {:x, 0}}
+
+    test "forward propagates returns non_neg_integer" do
+      assert %{x: %{0 => builtin(:non_neg_integer)}} = [@op_map_sz]
+      |> Parser.new(preload: %{1 => @any_map})
+      |> Parser.do_forward
+      |> history_finish
+    end
+
+    test "forward propagates a fixed number if there are only required keys"
+
+    test "backpropagates to require a value in register 1" do
+      state = [@op_map_sz]
+      |> Parser.new()
+      |> Parser.do_forward
+
+      assert %{1 => @any_map} = history_start(state).x
+      assert %{0 => builtin(:non_neg_integer)} = history_finish(state).x
     end
 
     test "errors if incompatible datatypes are provided"

@@ -4,7 +4,10 @@ defmodule Type.Inference.Opcodes.Misc do
 
   alias Type.Inference.Module.ParallelParser
 
+  # LINE MARKER OPCODE
   opcode {:line, _}, :noop
+
+  # NOOP OPCODES
 
   opcode {:allocate, _, _}, :noop
 
@@ -19,5 +22,8 @@ defmodule Type.Inference.Opcodes.Misc do
   opcode {:deallocate, _}, :noop
 
   opcode {:trim, _, _}, :noop
+
+  # TO BE VERIFIED
+  opcode {:badmatch, _}, :noop
 
 end

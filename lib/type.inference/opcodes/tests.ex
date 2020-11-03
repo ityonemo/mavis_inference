@@ -6,6 +6,26 @@ defmodule Type.Inference.Opcodes.Tests do
 
   alias Type.Inference.Module.ParallelParser
 
+  opcode {:test, :is_integer, {:f, fail}, [from]} do
+    forward(state, _meta, ...) do
+      # get the required values from the fail condition.
+      jump_block = ParallelParser.obtain_label(fail)
+
+      cond do
+        not is_defined(state, from) ->
+          jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
+          {:backprop, [put_reg(state, from, builtin(:integer)) | jump_needs]}
+        Type.usable_as(fetch_type(state, from), builtin(:integer)) == :ok ->
+          {:ok, state}
+        true ->
+          [jump_res] = jump_block
+          {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
+      end
+    end
+
+    backprop :terminal
+  end
+
   @opdoc """
   takes the value in register `from` and checks if it's nil.  If it's nil, then proceed
   to the next opcode.  If it's not, then jump to block label `fail`
@@ -60,6 +80,28 @@ defmodule Type.Inference.Opcodes.Tests do
           jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
           {:backprop, [put_reg(state, from, builtin(:atom)) | jump_needs]}
         Type.usable_as(fetch_type(state, from), builtin(:atom)) == :ok ->
+          {:ok, state}
+        true ->
+          [jump_res] = jump_block
+          {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
+      end
+    end
+
+    backprop :terminal
+  end
+
+  opcode {:test, :is_tagged_tuple, {:f, fail}, [from, length, tag]} do
+    forward(state, _meta, ...) do
+      # get the required values from the fail condition.
+      jump_block = ParallelParser.obtain_label(fail)
+
+      cond do
+        not is_defined(state, from) ->
+          jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
+          tag_elems = List.duplicate(builtin(:any), length - 1)
+          tag_tuple = %Type.Tuple{elements: [fetch_type(state, tag) | tag_elems]}
+          {:backprop, [put_reg(state, from, tag_tuple) | jump_needs]}
+        Type.usable_as(fetch_type(state, from), %Type.Tuple{elements: :any}) == :ok ->
           {:ok, state}
         true ->
           [jump_res] = jump_block

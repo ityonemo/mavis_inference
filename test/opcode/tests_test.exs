@@ -26,6 +26,92 @@ defmodule TypeTest.Opcode.TestsTest do
     }])
   end
 
+  describe "is_integer opcode" do
+    @op_is_int {:test, :is_integer, {:f, 11}, [x: 0]}
+    @op_is_int_all [@op_is_int, @op_set0]
+
+    setup do
+      # preseed the test thread with a message containing the block
+      # that's going to drop in.
+      ParallelParser.send_lookup(self(), 11, :fun, 0, [%Block{
+        needs: %{0 => builtin(:atom)},
+        makes: builtin(:float)
+      }])
+    end
+
+    test "forward propagates the type on an integer" do
+      state = @op_is_int_all
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type on pos_integer" do
+      state = @op_is_int_all
+      |> Parser.new(preload: %{0 => builtin(:pos_integer)})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type on neg_integer" do
+      state = @op_is_int_all
+      |> Parser.new(preload: %{0 => builtin(:neg_integer)})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type on non_neg_integer" do
+      state = @op_is_int_all
+      |> Parser.new(preload: %{0 => builtin(:non_neg_integer)})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type on literal integer" do
+      state = @op_is_int_all
+      |> Parser.new(preload: %{0 => 47})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type that matches the jump condition" do
+      state = @op_is_int_all
+      |> Parser.new(preload: %{0 => builtin(:atom)})
+      |> fast_forward
+
+      final = fast_forward(state)
+
+      assert %Registers{x: %{0 => builtin(:atom)}} = history_start(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the test register" do
+      state = @op_is_int_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+
+      assert %Registers{x: %{0 => builtin(:atom)}} = history_start(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
+
   describe "is_nil opcode" do
     @op_is_nil {:test, :is_nil, {:f, 10}, [x: 0]}
     @op_is_nil_all [@op_is_nil, @op_set0]
@@ -233,6 +319,50 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => %Type.Tuple{elements: :any}}} = history_start(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
+  describe "is_tagged_tuple opcode" do
+    @op_is_ttup {:test, :is_tagged_tuple, {:f, 10}, [{:x, 0}, 2, {:atom, :tag}]}
+    @op_is_ttup_all [@op_is_ttup, @op_set0]
+
+    test "forward propagates the type on an any tuple" do
+      state = @op_is_ttup_all
+      |> Parser.new(preload: %{0 => %Type.Tuple{elements: [:tag, builtin(:any)]}})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type that matches the jump condition" do
+      state = @op_is_ttup_all
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+
+      final = fast_forward(state)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the test register" do
+      state = @op_is_ttup_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %Registers{x: %{0 => %Type.Tuple{elements: [:tag, builtin(:any)]}}} = history_start(state, 0)
       assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)

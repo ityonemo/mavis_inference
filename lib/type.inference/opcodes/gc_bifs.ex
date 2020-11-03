@@ -1,4 +1,4 @@
-defmodule Type.Inference.Opcodes.GcBif do
+defmodule Type.Inference.Opcodes.GcBifs do
 
   import Type, only: :macros
 
@@ -24,6 +24,22 @@ defmodule Type.Inference.Opcodes.GcBif do
         {:ok, []}
       end
     end
+  end
+
+  opcode {:gc_bif, :map_size, _fail, 1, [from], to} do
+    forward(state, _meta, ...) do
+      if is_defined(state, from) do
+        {:ok, put_reg(state, to, builtin(:non_neg_integer))}
+      else
+        prev_state = state
+        |> tombstone(to)
+        |> put_reg(from, %Type.Map{optional: %{builtin(:any) => builtin(:any)}})
+        
+        {:backprop, [prev_state]}
+      end
+    end
+
+    backprop :terminal
   end
 
   # TODO: make this not be as crazy
