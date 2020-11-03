@@ -96,4 +96,36 @@ defmodule TypeTest.Opcode.PutsTest do
 
     test "passes needs through a backpropagation"
   end
+
+  describe "put_tuple_2 with a register parameter" do
+    @op_put_tup [{:put_tuple2, {:x, 0}, {:list, [atom: :foo, x: 0]}}]
+
+    test "forwards to stitch together a normal list" do
+      state = @op_put_tup
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+
+      assert %Registers{x: %{0 =>
+        %Type.Tuple{elements: [:foo, builtin(:integer)]}}} = history_finish(state)
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the tail register" do
+      state = @op_put_tup
+      |> Parser.new()
+      |> fast_forward
+
+      assert %Registers{x: %{0 => builtin(:any)}} = history_start(state)
+      assert %Registers{x: %{0 =>
+        %Type.Tuple{elements: [:foo, builtin(:any)]}}} = history_finish(state)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
 end

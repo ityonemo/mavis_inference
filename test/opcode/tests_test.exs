@@ -188,23 +188,30 @@ defmodule TypeTest.Opcode.TestsTest do
     test "passes needs through a backpropagation"
   end
 
+  describe "is_tuple opcode" do
+    @op_is_tup {:test, :is_tuple, {:f, 10}, [x: 0]}
+    @op_is_tup_all [@op_is_tup, @op_set0]
 
-  describe "is_nonempty_list opcode" do
-    @op_is_nel {:test, :is_nonempty_list, {:f, 10}, [x: 0]}
-    @op_is_nel_all [@op_is_nel, @op_set0]
-    @nonempty_any %Type.List{type: builtin(:any), nonempty: true}
-
-    test "forward propagates the type on non empty list" do
-      state = @op_is_nel_all
-      |> Parser.new(preload: %{0 => @nonempty_any})
+    test "forward propagates the type on an any tuple" do
+      state = @op_is_tup_all
+      |> Parser.new(preload: %{0 => %Type.Tuple{elements: :any}})
       |> fast_forward
 
-      assert %Registers{x: %{0 => @nonempty_any}} = history_start(state)
+      assert %Registers{x: %{0 => %Type.Tuple{elements: :any}}} = history_start(state)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type on an a defined tuple" do
+      state = @op_is_tup_all
+      |> Parser.new(preload: %{0 => %Type.Tuple{elements: [builtin(:any)]}})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => %Type.Tuple{elements: [builtin(:any)]}}} = history_start(state)
       assert %Registers{x: %{0 => :foo}} = history_finish(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
-      state = @op_is_nel_all
+      state = @op_is_tup_all
       |> Parser.new(preload: %{0 => builtin(:integer)})
       |> fast_forward
 
@@ -221,11 +228,67 @@ defmodule TypeTest.Opcode.TestsTest do
     test "forwards when the jump has multiple conditions"
 
     test "backpropagates when there's nothing in the test register" do
-      state = @op_is_nel_all
+      state = @op_is_tup_all
       |> Parser.new()
       |> fast_forward
 
-      assert %Registers{x: %{0 => %Type.List{nonempty: true, type: builtin(:any)}}} = history_start(state, 0)
+      assert %Registers{x: %{0 => %Type.Tuple{elements: :any}}} = history_start(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
+  describe "is_list opcode" do
+    @op_is_lst {:test, :is_list, {:f, 10}, [x: 0]}
+    @op_is_lst_all [@op_is_lst, @op_set0]
+    @any_list %Type.List{type: builtin(:any)}
+
+    test "forward propagates the type on a general list" do
+      state = @op_is_lst_all
+      |> Parser.new(preload: %{0 => @any_list})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => @any_list}} = history_start(state)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type on a list with any final" do
+      state = @op_is_lst_all
+      |> Parser.new(preload: %{0 => %Type.List{type: builtin(:any), final: builtin(:any)}})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => %Type.List{type: builtin(:any), final: builtin(:any)}}} = history_start(state)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type that matches the jump condition" do
+      state = @op_is_lst_all
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+
+      final = fast_forward(state)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the test register" do
+      state = @op_is_lst_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %Registers{x: %{0 => %Type.List{type: builtin(:any), final: builtin(:any)}}}
+        = history_start(state, 0)
       assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
@@ -281,7 +344,6 @@ defmodule TypeTest.Opcode.TestsTest do
 
     test "passes needs through a backpropagation"
   end
-
 
   describe "is_function2 opcode with constant integer" do
     @op_is_f2_1 {:test, :is_function2, {:f, 10}, [x: 0, integer: 1]}

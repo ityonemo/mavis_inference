@@ -58,7 +58,6 @@ defmodule TypeTest.Opcode.GcBifTest do
     {builtin(:float),       builtin(:float)}       => builtin(:float)}
 
   describe "when the opcode is the addition bif" do
-
     @opcode_add {:gc_bif, :+, {:f, 0}, 2, [x: 0, x: 1], {:x, 0}}
 
     test "triggers a full backpropagation on all number choices" do
@@ -67,6 +66,66 @@ defmodule TypeTest.Opcode.GcBifTest do
       assert %Parser{histories: histories} = Parser.do_forward(state)
 
       Enum.each(@add_result, fn {{left, right}, res} ->
+        assert [
+          %Registers{x: %{0 => res, 1 => right}},
+          %Registers{x: %{0 => left, 1 => right}}] in histories
+      end)
+    end
+  end
+
+  @sub_result %{
+    {builtin(:pos_integer), builtin(:pos_integer)} => builtin(:integer),
+    {builtin(:pos_integer), 0}                     => builtin(:pos_integer),
+    {builtin(:pos_integer), builtin(:neg_integer)} => builtin(:pos_integer),
+    {0,                     builtin(:pos_integer)} => builtin(:neg_integer),
+    {0,                     0}                     => 0,
+    {0,                     builtin(:neg_integer)} => builtin(:pos_integer),
+    {builtin(:neg_integer), builtin(:pos_integer)} => builtin(:neg_integer),
+    {builtin(:neg_integer), 0}                     => builtin(:neg_integer),
+    {builtin(:neg_integer), builtin(:neg_integer)} => builtin(:integer),
+    {builtin(:integer),     builtin(:float)}       => builtin(:float),
+    {builtin(:float),       builtin(:integer)}     => builtin(:float),
+    {builtin(:float),       builtin(:float)}       => builtin(:float)}
+
+  describe "when the opcode is the subtraction bif" do
+    @opcode_sub {:gc_bif, :-, {:f, 0}, 2, [x: 0, x: 1], {:x, 0}}
+
+    test "triggers a full backpropagation on all number choices" do
+      state = Parser.new([@opcode_sub])
+
+      assert %Parser{histories: histories} = Parser.do_forward(state)
+
+      Enum.each(@sub_result, fn {{left, right}, res} ->
+        assert [
+          %Registers{x: %{0 => res, 1 => right}},
+          %Registers{x: %{0 => left, 1 => right}}] in histories
+      end)
+    end
+  end
+
+  @mul_result %{
+    {builtin(:pos_integer), builtin(:pos_integer)} => builtin(:pos_integer),
+    {builtin(:pos_integer), 0}                     => 0,
+    {builtin(:pos_integer), builtin(:neg_integer)} => builtin(:neg_integer),
+    {0,                     builtin(:pos_integer)} => 0,
+    {0,                     0}                     => 0,
+    {0,                     builtin(:neg_integer)} => 0,
+    {builtin(:neg_integer), builtin(:pos_integer)} => builtin(:neg_integer),
+    {builtin(:neg_integer), 0}                     => 0,
+    {builtin(:neg_integer), builtin(:neg_integer)} => builtin(:pos_integer),
+    {builtin(:integer),     builtin(:float)}       => builtin(:float),
+    {builtin(:float),       builtin(:integer)}     => builtin(:float),
+    {builtin(:float),       builtin(:float)}       => builtin(:float)}
+
+  describe "when the opcode is the multiplication bif" do
+    @opcode_mul {:gc_bif, :*, {:f, 0}, 2, [x: 0, x: 1], {:x, 0}}
+
+    test "triggers a full backpropagation on all number choices" do
+      state = Parser.new([@opcode_mul])
+
+      assert %Parser{histories: histories} = Parser.do_forward(state)
+
+      Enum.each(@mul_result, fn {{left, right}, res} ->
         assert [
           %Registers{x: %{0 => res, 1 => right}},
           %Registers{x: %{0 => left, 1 => right}}] in histories

@@ -31,6 +31,23 @@ defmodule Type.Inference.Opcodes.Puts do
     backprop :terminal
   end
 
+  opcode {:put_tuple2, dest, {:list, list}} do
+    forward(state, _meta, ...) do
+      try do
+        Enum.each(list, fn
+          reg when not is_defined(state, reg) ->
+            throw reg
+          _ -> :ok
+        end)
 
-#  {:put_tuple2, {:x, 0}, {:list, [atom: :badmap, x: 0]}
+        tuple = %Type.Tuple{elements: Enum.map(list, &fetch_type(state, &1))}
+        {:ok, put_reg(state, dest, tuple)}
+      catch
+        res ->
+          {:backprop, [put_reg(state, res, builtin(:any))]}
+      end
+    end
+
+    backprop :terminal
+  end
 end

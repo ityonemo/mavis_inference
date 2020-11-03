@@ -18,4 +18,6 @@ defmodule Type.Inference.Opcodes.Misc do
 
   opcode {:deallocate, _}, :noop
 
+  opcode {:trim, _, _}, :noop
+
 end
