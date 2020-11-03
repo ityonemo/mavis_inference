@@ -283,8 +283,8 @@ defmodule TypeTest.Opcode.TestsTest do
   end
 
 
-  describe "is_function_2 opcode with constant integer" do
-    @op_is_f2_1 {:test, :is_function_2, {:f, 10}, [x: 0, integer: 1]}
+  describe "is_function2 opcode with constant integer" do
+    @op_is_f2_1 {:test, :is_function2, {:f, 10}, [x: 0, integer: 1]}
     @op_is_f2_1_all [@op_is_f2_1, @op_set0]
 
     test "forward propagates the type on correct-arity function" do
@@ -328,7 +328,7 @@ defmodule TypeTest.Opcode.TestsTest do
     test "passes needs through a backpropagation"
   end
 
-  describe "is_function_2 opcode with param integer" do
+  describe "is_function2 opcode with param integer" do
     test "works"
   end
 

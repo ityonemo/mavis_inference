@@ -1,17 +1,5 @@
 defmodule Type.Inference do
-  @enforce_keys [:code, :regs]
-  defstruct @enforce_keys ++ [
-    stack: []
-  ]
-
-  @type opcode :: atom | tuple
-
-  @type state :: %__MODULE__{
-    code:  [opcode],
-    stack: [opcode],
-    regs:  [[Registers.t]]
-  }
-
+  
   import Type
 
   @behaviour Type.Inference.Api
@@ -31,14 +19,6 @@ defmodule Type.Inference do
         # must tolerate in-memory modules
         :unknown
       error = {:error, _} -> error
-    end
-  end
-
-  def fetch_block(module, fun, arity, inference_module! \\ __MODULE__) do
-    inference_module! = Application.get_env(:mavis, :inference, inference_module!)
-    case inference_module!.infer(module, fun, arity) do
-      {:ok, spec} -> Type.Inference.Block.from_spec(spec)
-      error -> error
     end
   end
 end

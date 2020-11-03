@@ -11,7 +11,8 @@ defmodule Type.Inference.Opcodes.Gets do
       case fetch_type(state, from) do
         %Type.Tuple{elements: els} when length(els) > index ->
           {:ok, put_reg(state, to, Enum.at(els, index))}
-        _ -> {:error, "foobar"}
+        _ ->
+          raise "get_tuple element #{inspect from} #{inspect index} #{inspect to} failed for #{state}"
       end
     end
 
