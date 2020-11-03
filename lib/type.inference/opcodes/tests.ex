@@ -171,6 +171,28 @@ defmodule Type.Inference.Opcodes.Tests do
     backprop :terminal
   end
 
+  @any_map %Type.Map{optional: %{builtin(:any) => builtin(:any)}}
+
+  opcode {:test, :is_map, {:f, fail}, [from]} do
+    forward(state, _meta, ...) do
+      # get the required values from the fail condition.
+      jump_block = ParallelParser.obtain_label(fail)
+
+      cond do
+        not is_defined(state, from) ->
+          jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
+          {:backprop, [put_reg(state, from, @any_map) | jump_needs]}
+        Type.usable_as(fetch_type(state, from), @any_map) == :ok ->
+          {:ok, state}
+        true ->
+          [jump_res] = jump_block
+          {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
+      end
+    end
+
+    backprop :terminal
+  end
+
   opcode {:test, :is_function, {:f, fail}, [fun]} do
     forward(state, _meta, ...) do
       jump_block = ParallelParser.obtain_label(fail)

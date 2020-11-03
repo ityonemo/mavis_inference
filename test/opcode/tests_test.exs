@@ -524,6 +524,54 @@ defmodule TypeTest.Opcode.TestsTest do
     test "works"
   end
 
+  test "reorganize this along the lines of type order"
+
+  describe "is_map opcode" do
+    @op_is_map {:test, :is_map, {:f, 10}, [x: 0]}
+    @op_is_map_all [@op_is_map, @op_set0]
+    @any_map %Type.Map{optional: %{builtin(:any) => builtin(:any)}}
+
+    test "forward propagates the type on a map" do
+      state = @op_is_map_all
+      |> Parser.new(preload: %{0 => @any_map})
+      |> fast_forward
+
+      assert %Registers{x: %{0 => @any_map}} = history_start(state)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+    end
+
+    test "forward propagates the type that matches the jump condition" do
+      state = @op_is_map_all
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+
+      final = fast_forward(state)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the test register" do
+      state = @op_is_map_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %Registers{x: %{0 => @any_map}} = history_start(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+
+      assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
   test "make is_eq_exact operate on arbitrary types of things"
 
   describe "is_eq_exact opcode" do
