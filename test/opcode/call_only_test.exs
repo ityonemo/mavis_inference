@@ -12,7 +12,6 @@ defmodule TypeTest.Opcode.CallOnlyTest do
 
   @moduletag :opcodes
 
-
   describe "when forward propagating the call_only, 0 opcode" do
 
     @opcode_0 {:call_only, 0, {__MODULE__, :fun, 1}}

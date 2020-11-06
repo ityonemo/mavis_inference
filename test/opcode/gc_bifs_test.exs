@@ -44,6 +44,76 @@ defmodule TypeTest.Opcode.GcBifsTest do
     test "errors if incompatible datatypes are provided"
   end
 
+  describe "when the opcode is the byte_size bif" do
+    @binary %Type.Bitstring{size: 0, unit: 8}
+
+    @op_byt_sz {:gc_bif, :byte_size, {:f, 0}, 1, [x: 1], {:x, 0}}
+
+    test "forward propagates returns non_neg_integer" do
+      state = Parser.new([@op_byt_sz], preload: %{1 => @binary})
+
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [
+        %Registers{x: %{0 => builtin(:non_neg_integer), 1 => @binary}},
+        %Registers{x: %{1 => @binary}}
+      ] = history
+    end
+
+    test "forward propagates a fixed number if the size is fixed"
+
+    test "backpropagates to require a value in register 1" do
+      state = Parser.new([@op_byt_sz])
+
+      assert %Parser{histories: [history]} = Parser.do_forward(state)
+
+      assert [
+        %Registers{x: %{0 => builtin(:non_neg_integer), 1 => @binary}},
+        %Registers{x: %{1 => @binary}}
+      ] = history
+    end
+
+    test "errors if incompatible datatypes are provided"
+  end
+
+  describe "length bif" do
+    @op_len {:gc_bif, :length, {:f, 0}, 2, [x: 1], {:x, 0}}
+
+    test "forward propagates returns zero for empty list" do
+      assert %{x: %{0 => 0}} = [@op_len]
+      |> Parser.new(preload: %{1 => []})
+      |> Parser.do_forward
+      |> history_finish
+    end
+
+    test "forward propagates arbitrary list returns non_neg_integer" do
+      assert %{x: %{0 => builtin(:non_neg_integer)}} = [@op_len]
+      |> Parser.new(preload: %{1 => %Type.List{}})
+      |> Parser.do_forward
+      |> history_finish
+    end
+
+    test "forward propagates nonempty list returns non_neg_integer" do
+      assert %{x: %{0 => builtin(:pos_integer)}} = [@op_len]
+      |> Parser.new(preload: %{1 => %Type.List{nonempty: true}})
+      |> Parser.do_forward
+      |> history_finish
+    end
+
+    test "backpropagates to require a value in register 1" do
+      state = [@op_len]
+      |> Parser.new
+      |> Parser.do_forward
+
+      assert %{1 => %Type.List{}} = history_start(state).x
+      assert %{0 => builtin(:non_neg_integer)} = history_finish(state).x
+    end
+
+    test "overbroad finals"
+
+    test "errors if incompatible datatypes are provided"
+  end
+
   describe "when the opcode is the map_size bif" do
     @any_map %Type.Map{optional: %{builtin(:any) => builtin(:any)}}
     @op_map_sz {:gc_bif, :map_size, {:f, 0}, 1, [x: 1], {:x, 0}}

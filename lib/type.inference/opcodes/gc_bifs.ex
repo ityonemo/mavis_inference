@@ -26,7 +26,45 @@ defmodule Type.Inference.Opcodes.GcBifs do
     end
   end
 
-  opcode {:gc_bif, :map_size, _fail, 1, [from], to} do
+  opcode {:gc_bif, :byte_size, _, _, [from], to} do
+    forward(state, _meta, ...) do
+      if is_defined(state, from) do
+        {:ok, put_reg(state, to, builtin(:non_neg_integer))}
+      else
+        prev_state = state
+        |> tombstone(to)
+        |> put_reg(from, %Type.Bitstring{size: 0, unit: 8})
+
+        {:backprop, [prev_state]}
+      end
+    end
+
+    backprop(state, _meta, ...) do
+      if Type.subtype?(fetch_type(state, to), builtin(:non_neg_integer)) do
+        {:ok, [put_reg(state, from, %Type.Bitstring{size: 0, unit: 1})]}
+      else
+        {:ok, []}
+      end
+    end
+  end
+
+  opcode {:gc_bif, :length, _fail, _, [from], to} do
+    forward(state, _meta, ...) do
+      cond do
+        not is_defined(state, from) ->
+          {:backprop, [put_reg(state, from, %Type.List{})]}
+        fetch_type(state, from) == [] -> {:ok, put_reg(state, to, 0)}
+        match?(%Type.List{nonempty: true}, fetch_type(state, from)) ->
+          {:ok, put_reg(state, to, builtin(:pos_integer))}
+        match?(%Type.List{}, fetch_type(state, from)) ->
+          {:ok, put_reg(state, to, builtin(:non_neg_integer))}
+      end
+    end
+
+    backprop :terminal
+  end
+
+  opcode {:gc_bif, :map_size, _fail, _, [from], to} do
     forward(state, _meta, ...) do
       if is_defined(state, from) do
         {:ok, put_reg(state, to, builtin(:non_neg_integer))}
@@ -34,7 +72,7 @@ defmodule Type.Inference.Opcodes.GcBifs do
         prev_state = state
         |> tombstone(to)
         |> put_reg(from, %Type.Map{optional: %{builtin(:any) => builtin(:any)}})
-        
+
         {:backprop, [prev_state]}
       end
     end

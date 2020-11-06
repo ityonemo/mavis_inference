@@ -8,4 +8,16 @@ defmodule TypeTest.Opcode.VerifyTest do
   test "try_case"
 
   test "case_end"
+
+  test "try"
+
+  test "try_end"
+
+  test "loop_rec"
+
+  test "loop_rec_end"
+
+  test "build_stacktrace"
+
+  test "recv_mark"
 end

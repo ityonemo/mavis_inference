@@ -372,6 +372,86 @@ defmodule TypeTest.Opcode.TestsTest do
     test "passes needs through a backpropagation"
   end
 
+  describe "is_port opcode" do
+    @op_is_port {:test, :is_port, {:f, 10}, [x: 0]}
+    @op_is_port_all [@op_is_port, @op_set0]
+
+    test "forward propagates the type on a general list" do
+      assert %{x: %{0 => :foo}} = @op_is_port_all
+      |> Parser.new(preload: %{0 => builtin(:port)})
+      |> fast_forward()
+      |> history_finish
+    end
+
+    test "forward propagates the type that matches the jump condition" do
+      assert %{x: %{0 => builtin(:float)}} = @op_is_port_all
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+      |> history_finish
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the test register" do
+      state = @op_is_port_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %{x: %{0 => builtin(:port)}} = history_start(state, 0)
+      assert %{x: %{0 => :foo}} = history_finish(state, 0)
+
+      assert %{x: %{0 => builtin(:integer)}} = history_start(state, 1)
+      assert %{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
+  describe "is_reference opcode" do
+    @op_is_ref {:test, :is_reference, {:f, 10}, [x: 0]}
+    @op_is_ref_all [@op_is_ref, @op_set0]
+    @binary %Type.Bitstring{unit: 8}
+
+    test "forward propagates the type on a general list" do
+      assert %{x: %{0 => :foo}} = @op_is_ref_all
+      |> Parser.new(preload: %{0 => builtin(:reference)})
+      |> fast_forward()
+      |> history_finish
+    end
+
+    test "forward propagates the type that matches the jump condition" do
+      assert %{x: %{0 => builtin(:float)}} = @op_is_ref_all
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+      |> history_finish
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the test register" do
+      state = @op_is_ref_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %{x: %{0 => builtin(:reference)}} = history_start(state, 0)
+      assert %{x: %{0 => :foo}} = history_finish(state, 0)
+
+      assert %{x: %{0 => builtin(:integer)}} = history_start(state, 1)
+      assert %{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
+
   describe "is_list opcode" do
     @op_is_lst {:test, :is_list, {:f, 10}, [x: 0]}
     @op_is_lst_all [@op_is_lst, @op_set0]
@@ -423,6 +503,46 @@ defmodule TypeTest.Opcode.TestsTest do
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+    end
+
+    test "passes needs through a backpropagation"
+  end
+
+  describe "is_binary opcode" do
+    @op_is_bin {:test, :is_binary, {:f, 10}, [x: 0]}
+    @op_is_bin_all [@op_is_bin, @op_set0]
+    @binary %Type.Bitstring{unit: 8}
+
+    test "forward propagates the type on a general list" do
+      assert %{x: %{0 => :foo}} = @op_is_bin_all
+      |> Parser.new(preload: %{0 => @binary})
+      |> fast_forward()
+      |> history_finish
+    end
+
+    test "forward propagates the type that matches the jump condition" do
+      assert %{x: %{0 => builtin(:float)}} = @op_is_bin_all
+      |> Parser.new(preload: %{0 => builtin(:integer)})
+      |> fast_forward
+      |> history_finish
+    end
+
+    test "what happens when the forward propagation is overbroad"
+
+    test "what happens when the forward propagation is unmatched"
+
+    test "forwards when the jump has multiple conditions"
+
+    test "backpropagates when there's nothing in the test register" do
+      state = @op_is_bin_all
+      |> Parser.new()
+      |> fast_forward
+
+      assert %{x: %{0 => @binary}} = history_start(state, 0)
+      assert %{x: %{0 => :foo}} = history_finish(state, 0)
+
+      assert %{x: %{0 => builtin(:integer)}} = history_start(state, 1)
+      assert %{x: %{0 => builtin(:float)}} = history_finish(state, 1)
     end
 
     test "passes needs through a backpropagation"

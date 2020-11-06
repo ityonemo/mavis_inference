@@ -193,6 +193,40 @@ defmodule Type.Inference.Opcodes.Tests do
     backprop :terminal
   end
 
+  opcode {:test, :is_port, {:f, fail}, [fun]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+      [jump_res] = jump_block
+
+      cond do
+        ! is_defined(state, fun) ->
+          jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
+          {:backprop, [put_reg(state, fun, builtin(:port)) | jump_needs]}
+        match?(builtin(:port), fetch_type(state, fun)) ->
+          {:ok, state}
+        true ->
+          {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
+      end
+    end
+  end
+
+  opcode {:test, :is_reference, {:f, fail}, [fun]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+      [jump_res] = jump_block
+
+      cond do
+        ! is_defined(state, fun) ->
+          jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
+          {:backprop, [put_reg(state, fun, builtin(:reference)) | jump_needs]}
+        match?(builtin(:reference), fetch_type(state, fun)) ->
+          {:ok, state}
+        true ->
+          {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
+      end
+    end
+  end
+
   opcode {:test, :is_function, {:f, fail}, [fun]} do
     forward(state, _meta, ...) do
       jump_block = ParallelParser.obtain_label(fail)
@@ -203,6 +237,23 @@ defmodule Type.Inference.Opcodes.Tests do
           jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
           {:backprop, [put_reg(state, fun, %Type.Function{params: :any, return: builtin(:any)}) | jump_needs]}
         match?(%Type.Function{}, fetch_type(state, fun)) ->
+          {:ok, state}
+        true ->
+          {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
+      end
+    end
+  end
+
+  opcode {:test, :is_binary, {:f, fail}, [fun]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+      [jump_res] = jump_block
+
+      cond do
+        ! is_defined(state, fun) ->
+          jump_needs = Enum.map(jump_block, &merge_reg(state, &1.needs))
+          {:backprop, [put_reg(state, fun, %Type.Bitstring{unit: 8}) | jump_needs]}
+        match?(%Type.Bitstring{size: size, unit: unit} when rem(unit, 8) == 0 and rem(size, 8) == 0, fetch_type(state, fun)) ->
           {:ok, state}
         true ->
           {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
@@ -230,6 +281,30 @@ defmodule Type.Inference.Opcodes.Tests do
 
   # TODO: put this into mavis.
   defguard is_singleton(value) when is_atom(value) or is_integer(value)
+
+  opcode {:test, :is_eq, {:f, fail}, [left, right]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+      [jump_res] = jump_block
+
+      cond do
+        ! is_defined(state, left) ->
+          {:backprop, [put_reg(state, left, builtin(:any))]}
+        ! is_defined(state, right) ->
+          {:backprop, [put_reg(state, right, builtin(:any))]}
+        is_singleton(fetch_type(state, left)) and fetch_type(state, left) == fetch_type(state, right) ->
+          {:ok, state}
+        is_singleton(fetch_type(state, left)) and is_singleton(fetch_type(state, right)) ->
+          {:ok, freeze: put_reg(state, left, jump_res.makes)}
+        Type.intersection(fetch_type(state, left), fetch_type(state, right)) == builtin(:none) ->
+          {:ok, freeze: put_reg(state, left, jump_res.makes)}
+        true ->
+          {:ok, [state, freeze: put_reg(state, {:x, 0}, jump_res.makes)]}
+      end
+    end
+
+    backprop :terminal
+  end
 
   opcode {:test, :is_eq_exact, {:f, fail}, [left, right]} do
     forward(state, _meta, ...) do
@@ -273,7 +348,51 @@ defmodule Type.Inference.Opcodes.Tests do
     backprop :terminal
   end
 
+  # TODO: fuse this with is_lt once we get with statements in the opcode header.
+  opcode {:test, :is_ge, {:f, fail}, [left, right]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+      [jump_res] = jump_block
+
+      cond do
+        ! is_defined(state, left) ->
+          {:backprop, [put_reg(state, left, builtin(:any))]}
+        ! is_defined(state, right) ->
+          {:backprop, [put_reg(state, right, builtin(:any))]}
+        true ->
+          {:ok, [state, freeze: put_reg(state, {:x, 0}, jump_res.makes)]}
+      end
+    end
+
+    backprop :terminal
+  end
+
+  # TODO: fuse this with is_ne_exact, once we get with statements in the opcode header
   opcode {:test, :is_ne, {:f, fail}, [left, right]} do
+    forward(state, _meta, ...) do
+      jump_block = ParallelParser.obtain_label(fail)
+      [jump_res] = jump_block
+
+      cond do
+        ! is_defined(state, left) ->
+          {:backprop, [put_reg(state, left, builtin(:any))]}
+        ! is_defined(state, right) ->
+          {:backprop, [put_reg(state, right, builtin(:any))]}
+        is_singleton(fetch_type(state, left)) and fetch_type(state, left) == fetch_type(state, right) ->
+          {:ok, freeze: put_reg(state, {:x, 0}, jump_res.makes)}
+        is_singleton(fetch_type(state, left)) and is_singleton(fetch_type(state, right)) ->
+          {:ok, state}
+        Type.intersection(fetch_type(state, left), fetch_type(state, right)) == builtin(:none) ->
+          {:ok, state}
+        true ->
+          {:ok, [state, freeze: put_reg(state, {:x, 0}, jump_res.makes)]}
+      end
+    end
+
+    backprop :terminal
+  end
+
+  opcode {:test, :is_ne_exact, {:f, fail}, [left, right]} do
     forward(state, _meta, ...) do
       jump_block = ParallelParser.obtain_label(fail)
       [jump_res] = jump_block

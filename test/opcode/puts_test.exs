@@ -128,4 +128,6 @@ defmodule TypeTest.Opcode.PutsTest do
     test "passes needs through a backpropagation"
   end
 
+  test "put_map_assoc"
+
 end
