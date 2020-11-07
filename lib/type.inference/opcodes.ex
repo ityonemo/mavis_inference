@@ -19,15 +19,16 @@ defmodule Type.Inference.Opcodes do
   }
 
   defmodule Operations do
+    @blank {:_, [], nil}
     @enforce_keys ~w(type opcode_ast code_ast)a
-    defstruct @enforce_keys ++ [reg_ast: nil, meta_ast: nil, guard_ast: nil]
+    defstruct @enforce_keys ++ [reg_ast: @blank, meta_ast: @blank, guard_ast: nil]
 
     @type t :: %__MODULE__{
       type: :forward | :backprop,
       opcode_ast: Macro.t,
       code_ast: Macro.t | :noop | :unimplemented,
-      reg_ast: Macro.t | nil,
-      meta_ast: Macro.t | nil,
+      reg_ast: Macro.t,
+      meta_ast: Macro.t,
       guard_ast: Macro.t | nil,
     }
 
@@ -136,21 +137,19 @@ defmodule Type.Inference.Opcodes do
   defmacro opcode(opcode_ast, whens, :unimplemented) do
     module = __CALLER__.module
     set_opcode(module, opcode_ast, whens[:when])
-
-    warning = "the opcode #{Macro.to_string opcode_ast} is not implemented yet."
-
+    
     quote do
       unquote(stash(
         module,
         type: :forward,
         reg_ast: @reg,
-        code_ast: {:ok, @reg}
+        code_ast: :unimplemented
       ))
       unquote(stash(
         module,
         type: :backprop,
         reg_ast: @reg,
-        code_ast: {:ok, @reg}
+        code_ast: :unimplemented
       ))
     end
   end
@@ -163,13 +162,13 @@ defmodule Type.Inference.Opcodes do
         module,
         type: :forward,
         reg_ast: @reg,
-        code_ast: {:ok, @reg}
+        code_ast: :noop
       ))
       unquote(stash(
         module,
         type: :backprop,
         reg_ast: @reg,
-        code_ast: {:ok, @reg}
+        code_ast: :noop
       ))
     end
   end
@@ -260,7 +259,7 @@ defmodule Type.Inference.Opcodes do
     operation = Operations
     |> struct(params!)
     |> Macro.escape
-    
+
     quote do
       @operations unquote(operation)
     end

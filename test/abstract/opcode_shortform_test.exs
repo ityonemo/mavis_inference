@@ -1,14 +1,13 @@
-defmodule TypeTest.Abstract.OpcodeFrameworkTest do
+defmodule TypeTest.Abstract.ShortformTest do
   use ExUnit.Case, async: true
   import ExUnit.CaptureIO
 
-  use Type.Inference.Opcodes
+  use Type.Inference.Opcodes, debug_dump_code: true
 
   @moduletag :abstract
 
   alias Type.Inference.Block.Parser
-
-  import Type
+  alias Type.Inference.Registers
 
   describe "an unimplemented opcode" do
     opcode :unimplemented, :unimplemented
@@ -56,15 +55,17 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
     end
 
     test "preserves the registers" do
-      empty_map = %{}
+      empty_reg = %Registers{}
 
-      state = Parser.new([:noop_fwd])
-      assert %{histories: [history]} = Parser.do_forward(state, __MODULE__)
-      assert [%{x: ^empty_map}, %{x: ^empty_map}] = history
+      assert [[^empty_reg, ^empty_reg]] = [:noop_fwd]
+      |> Parser.new
+      |> Parser.do_forward(__MODULE__)
+      |> Map.get(:histories)
 
-      state2 = Parser.new([:noop_fwd], preload: @zero_int)
-      assert %{histories: [history]} = Parser.do_forward(state2, __MODULE__)
-      assert [%{x: @zero_int}, %{x: @zero_int}] = history
+      assert [[%{x: @zero_int}, %{x: @zero_int}]] = [:noop_fwd]
+      |> Parser.new(preload: @zero_int)
+      |> Parser.do_forward(__MODULE__)
+      |> Map.get(:histories)
     end
   end
 
@@ -76,7 +77,7 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
     test "warns if you try to use it but passes it forth" do
       state = Parser.new([:unimp_fwd])
 
-      message = "the method forward for opcode :unimp_fwd is not implemented"
+      message = "forward mode for the opcode :unimp_fwd is not implemented yet."
 
       assert (capture_io :stderr, fn ->
         Parser.do_forward(state, __MODULE__)
@@ -106,7 +107,7 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
     end
 
     test "warns if you try to use it in the backprop direction" do
-      message = "the method backprop for opcode :unimp_bck is not implemented."
+      message = "backprop mode for the opcode :unimp_bck is not implemented yet."
 
       assert (capture_io :stderr, fn ->
         [:unimp_bck]
@@ -170,8 +171,4 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
       assert last.x[0] == :quux
     end
   end
-
-  test "an opcode that freezes"
-
-  test "an opcode that does dual histories"
 end

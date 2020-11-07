@@ -1,8 +1,6 @@
-defmodule TypeTest.Abstract.OpcodeGuardTest do
+defmodule TypeTest.Abstract.GuardTest do
   use ExUnit.Case, async: true
   import TypeTest.OpcodeCase
-
-  import ExUnit.CaptureIO
 
   use Type.Inference.Opcodes
 
@@ -114,6 +112,5 @@ defmodule TypeTest.Abstract.OpcodeGuardTest do
       |> Parser.do_forward(__MODULE__)
       |> history_finish
     end
-
   end
 end

@@ -110,4 +110,8 @@ defmodule TypeTest.Abstract.OpcodeTest do
 
   end
 
+  test "an opcode that freezes"
+
+  test "an opcode that does dual histories"
+
 end

@@ -1,4 +1,4 @@
-defmodule TypeTest.Abstract.OpcodeMacroTest do
+defmodule TypeTest.Abstract.ComptimeTest do
   use ExUnit.Case, async: true
   import ExUnit.CaptureIO
 
