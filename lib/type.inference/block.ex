@@ -127,22 +127,26 @@ defmodule Type.Inference.Block.Parser do
     Type.Inference.Opcodes.Terminal]
 
   @spec do_analyze(t, op_module) :: t
-  def do_analyze(state, opcode_modules \\ @default_opcode_modules)
+  def do_analyze(state, opcode_modules \\ nil)
   def do_analyze(state = %{code: []}, _), do: state
-  def do_analyze(state, opcode_modules) do
+  def do_analyze(state, opcode_modules!) do
+    opcode_modules! = opcode_modules! || @default_opcode_modules
+
     state
-    |> do_forward(opcode_modules)
+    |> do_forward(opcode_modules!)
     |> log_forward
-    |> do_analyze(opcode_modules)
+    |> do_analyze(opcode_modules!)
   end
 
   @spec do_forward(t, op_module) :: t
-  def do_forward(state, opcode_modules \\ @default_opcode_modules)
-  def do_forward(state = %{code: [opcode | _]}, opcode_modules) do
+  def do_forward(state, opcode_modules \\ nil)
+  def do_forward(state = %{code: [opcode | _]}, opcode_modules!) do
+    opcode_modules! = opcode_modules! || @default_opcode_modules
+
     new_histories = Enum.flat_map(state.histories,
       fn history = [latest | earlier] ->
         opcode
-        |> reduce_forward(latest, state.meta, opcode_modules)
+        |> reduce_forward(latest, state.meta, opcode_modules!)
         |> validate_forward  # prevents stupid mistakes
         |> case do
           {:ok, new_regs} -> prep_ok(new_regs, length(state.stack), history)
@@ -150,7 +154,7 @@ defmodule Type.Inference.Block.Parser do
             do_all_backprop(state,
                             replacement_regs,
                             earlier,
-                            opcode_modules)
+                            opcode_modules!)
           :noop -> [[latest | history]]
           :unimplemented ->
             IO.warn("forward mode for the opcode #{inspect opcode} is not implemented yet.", [])
@@ -225,6 +229,9 @@ defmodule Type.Inference.Block.Parser do
         :unimplemented ->
           IO.warn("backprop mode for the opcode #{inspect opcode} is not implemented yet.", [])
           [[latest | earlier]]
+        :no_return -> []
+        :unknown ->
+          raise Type.UnknownOpcodeError, opcode: opcode
       end
     end)
     # continue to backprop until we run out of stack.
@@ -234,7 +241,7 @@ defmodule Type.Inference.Block.Parser do
   end
 
   @spec reduce_backprop(term, Registers.t, map, op_module) ::
-    {:ok, [Registers.t]} | :noop | :unimplemented
+    {:ok, [Registers.t]} | :noop | :unimplemented | :no_return | :unknown
   defp reduce_backprop(opcode, latest, meta, opcode_modules) do
     opcode_modules
     |> List.wrap
@@ -282,7 +289,7 @@ defmodule Type.Inference.Block.Parser do
 
     defp validate_backprop(bck = {:ok, []}), do: bck
     defp validate_backprop(bck = {:ok, [%Registers{} | _]}), do: bck
-    defp validate_backprop(short) when short in [:noop, :unimplemented], do: short
+    defp validate_backprop(short) when short in @shortforms, do: short
     defp validate_backprop(bck) do
       raise "invalid backprop result #{inspect bck}"
     end

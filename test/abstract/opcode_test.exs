@@ -1,5 +1,6 @@
 defmodule TypeTest.Abstract.OpcodeTest do
   use ExUnit.Case, async: true
+  import TypeTest.OpcodeCase
 
   @moduletag :abstract
 
@@ -7,107 +8,94 @@ defmodule TypeTest.Abstract.OpcodeTest do
 
   alias Type.Inference.Block.Parser
   alias Type.Inference.Registers
-  import Type
 
-  describe "a splitting opcode" do
-    opcode :splitting do
+  @x0 {:x, 0}
+  @x1 {:x, 1}
 
+  describe "an opcode that splits on backpropgation" do
+    opcode :split_back do
       # checks register 0 and if it's empty, splits it into either
       # integer -> integer
       # atom -> atom
-      forward(state, _meta, ...) do
-        if state.x == %{} do
-          {:backprop, [
-            put_reg(state, {:x, 0}, builtin(:integer)),
-            put_reg(state, {:x, 0}, builtin(:atom))]}
-        else
-          {:ok, state}
-        end
+
+      forward(regs, _meta, ...) when not is_defined(regs, @x0) do
+        {:backprop, [
+          put_reg(regs, @x0, builtin(:integer)),
+          put_reg(regs, @x0, builtin(:atom))]}
       end
+      forward :noop
     end
 
-    test "causes splits" do
-      state = Parser.new([:splitting])
+    test "creates multiple histories" do
+      result = [:split_back]
+      |> Parser.new
+      |> Parser.do_forward(__MODULE__)
 
-      assert %Parser{histories: histories} = Parser.do_forward(state, __MODULE__)
-
-      assert [[%Registers{x: %{0 => builtin(:integer)}},
-               %Registers{x: %{0 => builtin(:integer)}}],
-              [%Registers{x: %{0 => builtin(:atom)}},
-               %Registers{x: %{0 => builtin(:atom)}}]] = histories
+      assert %{0 => builtin(:integer)} = history_start(result, 0).x
+      assert %{0 => builtin(:atom)} = history_start(result, 1).x
     end
   end
 
-  describe "pairs of opcodes" do
-
-    opcode :combiner do
-      forward(state, _meta, ...) do
-        cond do
-          not is_defined(state, {:x, 0}) ->
-            {:backprop, [put_reg(state, {:x, 0}, :foo),
-                         put_reg(state, {:x, 0}, :bar)]}
-          not is_defined(state, {:x, 1}) ->
-            {:backprop, [put_reg(state, {:x, 1}, :foo),
-                         put_reg(state, {:x, 1}, :bar)]}
-          true ->
-            {:ok, state}
-        end
-      end
-    end
-
-    test "combiner alone explores the search space." do
-      state = Parser.new([:combiner])
-
-      assert %Parser{histories: histories} = Parser.do_forward(state, __MODULE__)
-
-      assert [[%Registers{x: %{0 => :foo, 1 => :foo}},
-               %Registers{x: %{0 => :foo, 1 => :foo}}],
-              [%Registers{x: %{0 => :foo, 1 => :bar}},
-               %Registers{x: %{0 => :foo, 1 => :bar}}],
-              [%Registers{x: %{0 => :bar, 1 => :foo}},
-               %Registers{x: %{0 => :bar, 1 => :foo}}],
-              [%Registers{x: %{0 => :bar, 1 => :bar}},
-               %Registers{x: %{0 => :bar, 1 => :bar}}]] = histories
-    end
-
+  describe "an opcode that filters on input" do
     opcode :filter do
-      forward(state, _meta, ...) do
-        cond do
-          not is_defined(state, {:x, 0}) ->
-            {:backprop, [put_reg(state, {:x, 0}, :foo)]}
-          true ->
-            {:ok, state}
-        end
+      forward(regs, _meta, ...) when not is_defined(regs, @x0) do
+        {:backprop, [put_reg(regs, @x0, :foo)]}
       end
 
-      backprop(state, _meta, ...) do
-        if state.x[0] == :foo do
-          {:ok, [state]}
-        else
-          {:ok, []}
-        end
+      forward :noop
+
+      backprop(regs, _meta, ...) when is_reg(regs, @x0, :foo) do
+        :noop
+      end
+
+      backprop(regs, _meta, ...) do
+        :no_return
       end
     end
 
-    test "filter alone asserts the existence of foo." do
+    test "can clear " do
       state = Parser.new([:filter])
 
       assert %Parser{histories: histories} = Parser.do_forward(state, __MODULE__)
 
       assert [[%Registers{x: %{0 => :foo}}, %Registers{x: %{0 => :foo}}]] = histories
     end
+  end
 
-    test "combining the two" do
-      state = Parser.new([:filter, :combiner])
+  describe "an opcode that splits on backpropagation for multiple registers" do
+    opcode :multi_split_back do
+      forward(regs, _meta, ...) when not is_defined(regs, @x0) do
+        {:backprop, [put_reg(regs, @x0, :foo), put_reg(regs, @x0, :bar)]}
+      end
 
-      assert %Parser{histories: histories} = state
-      |> Parser.do_forward(__MODULE__)
-      |> Parser.do_forward(__MODULE__)
+      forward(regs, _meta, ...) when not is_defined(regs, @x1) do
+        {:backprop, [put_reg(regs, @x1, :foo), put_reg(regs, @x1, :bar)]}
+      end
 
-      assert [[%Type.Inference.Registers{x: %{0 => :foo, 1 => :foo}} | _],
-             [%Type.Inference.Registers{x: %{0 => :foo, 1 => :bar}} | _]] = histories
+      forward :noop
     end
 
+    test "explores the search space." do
+      result = [:multi_split_back]
+      |> Parser.new
+      |> Parser.do_forward(__MODULE__)
+
+      assert %{0 => :foo, 1 => :foo} = history_start(result, 0).x
+      assert %{0 => :foo, 1 => :bar} = history_start(result, 1).x
+      assert %{0 => :bar, 1 => :foo} = history_start(result, 2).x
+      assert %{0 => :bar, 1 => :bar} = history_start(result, 3).x
+    end
+
+    test "can be combined with a filter" do
+      result = [:filter, :multi_split_back]
+      |> Parser.new()
+      |> fast_forward(__MODULE__)
+
+      assert %{0 => :foo, 1 => :foo} = history_finish(result, 0).x
+      assert %{0 => :foo, 1 => :bar} = history_finish(result, 1).x
+
+      assert 2 == length(result.histories)
+    end
   end
 
   test "an opcode that freezes"

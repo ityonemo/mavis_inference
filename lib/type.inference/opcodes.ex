@@ -278,8 +278,10 @@ defmodule Type.Inference.Opcodes do
     type: :backprop,
     code_ast: mode)
   end
+
   defmacro backprop(:terminal) do
     # don't implement it.  This should cause it to raise at the end of the module cascade.
+    # TODO: make this more sophisticated
     quote do end
   end
 
