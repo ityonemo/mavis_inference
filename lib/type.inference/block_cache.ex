@@ -67,11 +67,7 @@ defmodule Type.Inference.BlockCache do
   # WORKERS
 
   def fetch_mfa(mfa = {module, fun, arity}) do
-    module |> IO.inspect(label: "70")
-
     Type.Inference.Module.from_module(module)
-    |> IO.inspect(label: "75")
-
     raise "foo"
   end
 

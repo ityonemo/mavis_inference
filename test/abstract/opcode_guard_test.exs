@@ -1,4 +1,4 @@
-defmodule TypeTest.Abstract.OpcodeFrameworkTest do
+defmodule TypeTest.Abstract.OpcodeGuardTest do
   use ExUnit.Case, async: true
   import TypeTest.OpcodeCase
 

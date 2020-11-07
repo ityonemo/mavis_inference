@@ -64,7 +64,10 @@ defmodule Type.Inference.Opcodes do
       import Type, only: :macros
 
       import Type.Inference.Opcodes, only: [
-        opcode: 2, forward: 4, forward: 3, forward: 1, backprop: 4, backprop: 1,
+        # key macros
+        opcode: 2, forward: 4, forward: 3, forward: 1,
+        backprop: 4, backprop: 3, backprop: 1,
+        # key helpers
         put_reg: 3, fetch_type: 2, merge_reg: 2, tombstone: 2, is_defined: 2]
 
       Module.register_attribute(__MODULE__, :operations, accumulate: true)
@@ -100,9 +103,6 @@ defmodule Type.Inference.Opcodes do
   ### KEY MACROS
 
   defmacro opcode(opcode_ast, do: {:__block__, meta, code}) do
-    if __CALLER__.module == TypeTest.Abstract.OpcodeFrameworkTest do
-      code |> IO.inspect(label: "83")
-    end
     Module.put_attribute(__CALLER__.module, :current_opcode, opcode_ast)
 
     rewritten_code = Enum.map(code, &rewrite_whens/1)
@@ -164,6 +164,16 @@ defmodule Type.Inference.Opcodes do
       reg_ast: reg_ast,
       meta_ast: meta_ast,
       code_ast: code_ast)
+  end
+
+  defmacro backprop(reg_ast, meta_ast, guards_and_code) do
+    {guard, code} = split(guards_and_code)
+    stash(__CALLER__.module,
+      type: :backprop,
+      reg_ast: reg_ast,
+      meta_ast: meta_ast,
+      code_ast: code,
+      guard_ast: guard)
   end
 
   defmacro backprop(mode) when mode in [:noop, :unimplemented] do
@@ -280,8 +290,8 @@ defmodule Type.Inference.Opcodes do
   end
 
   defp rewrite_whens({:when, _meta,
-      [{:forward, _, [state_ast, meta_ast, {:..., _, _}]}, clauses]}) do
-    quote do forward(unquote(state_ast), unquote(meta_ast), unquote(clauses)) end
+      [{type, _, [state_ast, meta_ast, {:..., _, _}]}, clauses]}) do
+    quote do unquote(type)(unquote(state_ast), unquote(meta_ast), unquote(clauses)) end
   end
   defp rewrite_whens(code), do: code
 
