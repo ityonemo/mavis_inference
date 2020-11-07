@@ -98,8 +98,42 @@ defmodule TypeTest.Abstract.OpcodeTest do
     end
   end
 
-  test "an opcode that freezes"
+  describe "an opcode that freezes" do
+    opcode :freeze do
+      forward(regs, _meta, ...) do
+        {:ok, freeze: regs}
+      end
+    end
 
-  test "an opcode that does dual histories"
+    opcode :move do
+      forward(regs, _meta, ...) do
+        {:ok, put_reg(regs, @x0, :bar)}
+      end
+    end
+
+    test "is ignored by the next opcode" do
+      assert %{x: %{0 => :foo}} = [:freeze, :move]
+      |> Parser.new(preload: %{0 => :foo})
+      |> fast_forward(__MODULE__)
+      |> history_finish
+    end
+  end
+
+  describe "an opcode that splits histories in the forward direction" do
+    opcode :split_fore do
+      forward(regs, _meta, ...) when is_reg(regs, @x0, builtin(:any)) do
+        {:ok, [put_reg(regs, @x1, :foo), put_reg(regs, @x1, :bar)]}
+      end
+    end
+
+    test "does so" do
+      result = [:split_fore]
+      |> Parser.new(preload: %{0 => builtin(:any)})
+      |> Parser.do_forward(__MODULE__)
+
+      assert %{1 => :foo} = history_finish(result, 0).x
+      assert %{1 => :bar} = history_finish(result, 1).x
+    end
+  end
 
 end
