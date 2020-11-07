@@ -40,8 +40,9 @@ defmodule Type.Inference.Opcodes do
 
     @spec to_ast(t) :: Macro.t
     def to_ast(op = %{guard_ast: nil}) do
+      opcode_ast = silenced_opcode(op)
       quote do
-        def unquote(op.type)(unquote(op.opcode_ast), unquote(op.reg_ast), unquote(op.meta_ast)) do
+        def unquote(op.type)(unquote(opcode_ast), unquote(op.reg_ast), unquote(op.meta_ast)) do
           unquote(op.code_ast)
         end
       end
@@ -57,6 +58,49 @@ defmodule Type.Inference.Opcodes do
          ]},
         [do: op.code_ast]
       ]}
+    end
+
+    # Tools for manipulating silencing opcode warnings.
+    defp silenced_opcode(operation = %{opcode_ast: opcode_ast}) do
+      unused = opcode_ast
+      |> get_variables
+      |> Enum.reject(&String.starts_with?(Atom.to_string(&1), "_"))
+      |> Kernel.--(get_variables(operation.code_ast))
+      |> Kernel.--(get_variables(operation.reg_ast))
+      |> Kernel.--(get_variables(operation.meta_ast))
+      |> Kernel.--(get_variables(operation.guard_ast))
+
+      #opcode_ast
+      substitute(opcode_ast, unused)
+    end
+
+    defp get_variables({atom, _, ctx}) when is_atom(ctx), do: [atom]
+    defp get_variables({a, b}) do
+      Enum.flat_map([a, b], &get_variables/1)
+    end
+    defp get_variables({_, _, list}) do
+      get_variables(list)
+    end
+    defp get_variables(list) when is_list(list) do
+      Enum.flat_map(list, &get_variables/1)
+    end
+    defp get_variables(_), do: []
+
+    defp substitute(any, []), do: any
+    defp substitute({atom, meta, ctx}, unused) when is_atom(ctx) do
+      {substitute(atom, unused), meta, ctx}
+    end
+    defp substitute({call, meta, list}, unused) when is_list(list) do
+      {call, meta, substitute(list, unused)}
+    end
+    defp substitute({a, b}, unused) do
+      {substitute(a, unused), substitute(b, unused)}
+    end
+    defp substitute(list, unused) when is_list(list) do
+      Enum.map(list, &substitute(&1, unused))
+    end
+    defp substitute(atom, unused) do
+      if atom in unused, do: String.to_atom("_#{atom}"), else: atom
     end
   end
 
@@ -137,7 +181,7 @@ defmodule Type.Inference.Opcodes do
   defmacro opcode(opcode_ast, whens, :unimplemented) do
     module = __CALLER__.module
     set_opcode(module, opcode_ast, whens[:when])
-    
+
     quote do
       unquote(stash(
         module,
@@ -272,6 +316,24 @@ defmodule Type.Inference.Opcodes do
     {:and, [], [gra, grb]}
   end
 
+  @spec split(Macro.t) :: {Macro.t, Macro.t}
+  # splits an "oddly created" with statement into its "true" with statement
+  # and the code resulting from a do: statement.
+  defp split({guard, meta, args}) do
+    last_arg = List.last(args)
+    case last_arg do
+      [do: code] ->
+        {{guard, meta, all_but_last(args)}, code}
+      other ->
+        {next_guard, next_code} = split(other)
+        {{guard, meta, all_but_last(args) ++ [next_guard]}, next_code}
+    end
+  end
+
+  defp all_but_last(lst) do
+    Enum.take(lst, length(lst) - 1)
+  end
+
   ###########################################################################
   # EXPORTED GUARDS, MACROS, and FUNCTIONS
 
@@ -313,62 +375,5 @@ defmodule Type.Inference.Opcodes do
   end
   def tombstone(state, register) do
     %{state | x: Map.delete(state.x, register)}
-  end
-
-  ####################################################################
-  ## Private functions
-
-  defp filter_params(opcode_ast, code_ast) do
-    unused = opcode_ast
-    |> get_variables
-    |> Enum.reject(&String.starts_with?(Atom.to_string(&1), "_"))
-    |> Kernel.--(get_variables(code_ast))
-
-    #opcode_ast
-    substitute(opcode_ast, unused)
-  end
-
-  def get_variables({atom, _, ctx}) when is_atom(ctx), do: [atom]
-  def get_variables({a, b}) do
-    Enum.flat_map([a, b], &get_variables/1)
-  end
-  def get_variables({_, _, list}) do
-    get_variables(list)
-  end
-  def get_variables(list) when is_list(list) do
-    Enum.flat_map(list, &get_variables/1)
-  end
-  def get_variables(_), do: []
-
-  defp substitute(any, []), do: any
-  defp substitute({atom, meta, ctx}, unused) when is_atom(ctx) do
-    {substitute(atom, unused), meta, ctx}
-  end
-  defp substitute({call, meta, list}, unused) when is_list(list) do
-    {call, meta, substitute(list, unused)}
-  end
-  defp substitute({a, b}, unused) do
-    {substitute(a, unused), substitute(b, unused)}
-  end
-  defp substitute(list, unused) when is_list(list) do
-    Enum.map(list, &substitute(&1, unused))
-  end
-  defp substitute(atom, unused) do
-    if atom in unused, do: String.to_atom("_#{atom}"), else: atom
-  end
-
-  defp split({guard, meta, args}) do
-    last_arg = List.last(args)
-    case last_arg do
-      [do: code] ->
-        {{guard, meta, all_but_last(args)}, code}
-      other ->
-        {next_guard, next_code} = split(other)
-        {{guard, meta, all_but_last(args) ++ [next_guard]}, next_code}
-    end
-  end
-
-  defp all_but_last(lst) do
-    Enum.take(lst, length(lst) - 1)
   end
 end
