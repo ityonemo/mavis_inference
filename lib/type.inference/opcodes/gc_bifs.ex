@@ -106,23 +106,27 @@ defmodule Type.Inference.Opcodes.GcBifs do
   defp do_add(builtin(:integer), t) when t in @all_int_types,        do: builtin(:integer)
 
   opcode {:gc_bif, :+, _, _, [left, right], to} do
-    foward(regs, _meta, ...) do
-      cond do
-        # TODO: make this a guard.
-        not is_defined(regs, left) ->
-          {:backprop, Enum.map(@int_types ++ @num_types, &put_reg(regs, left, &1))}
-        not is_defined(regs, right) and fetch_type(regs, left) in @int_types ->
-          {:backprop, Enum.map(@int_types, &put_reg(regs, right, &1))}
-        not is_defined(regs, right) and fetch_type(regs, left) == builtin(:float) ->
-          {:backprop, [put_reg(regs, right, builtin(:float)), put_reg(regs, right, builtin(:integer))]}
-        not is_defined(regs, right) and fetch_type(regs, left) == builtin(:integer) ->
-          {:backprop, [put_reg(regs, right, builtin(:float))]}
-        true ->
-          ltype = fetch_type(regs, left)
-          rtype = fetch_type(regs, right)
-          res = do_add(ltype, rtype)
-          {:ok, put_reg(regs, to, res)}
-      end
+    forward(regs, _meta, ...) when not is_defined(regs, left) do
+      {:backprop, Enum.map(@int_types ++ @num_types, &put_reg(regs, left, &1))}
+    end
+
+    forward(regs, _meta, ...) when not is_defined(regs, right) and is_reg_in(regs, left, @int_types) do
+      {:backprop, Enum.map(@int_types, &put_reg(regs, right, &1))}
+    end
+
+    forward(regs, _meta, ...) when not is_defined(regs, right) and is_reg(regs, left, builtin(:float)) do
+      {:backprop, [put_reg(regs, right, builtin(:float)), put_reg(regs, right, builtin(:integer))]}
+    end
+
+    forward(regs, _meta, ...) when not is_defined(regs, right) and is_reg(regs, left, builtin(:integer)) do
+      {:backprop, [put_reg(regs, right, builtin(:float))]}
+    end
+
+    forward(regs, _meta, ...) do
+      ltype = fetch_type(regs, left)
+      rtype = fetch_type(regs, right)
+      res = do_add(ltype, rtype)
+      {:ok, put_reg(regs, to, res)}
     end
 
     # a temporary lie.
@@ -149,23 +153,27 @@ defmodule Type.Inference.Opcodes.GcBifs do
   defp do_sub(builtin(:integer), t) when t in @all_int_types,        do: builtin(:integer)
 
   opcode {:gc_bif, :-, _, _, [left, right], to} do
+    forward(regs, _meta, ...) when not is_defined(regs, left) do
+      {:backprop, Enum.map(@int_types ++ @num_types, &put_reg(regs, left, &1))}
+    end
+
+    forward(regs, _meta, ...) when not is_defined(regs, right) and is_reg_in(regs, left, @int_types) do
+      {:backprop, Enum.map(@int_types, &put_reg(regs, right, &1))}
+    end
+
+    forward(regs, _meta, ...) when not is_defined(regs, right) and is_reg(regs, left, builtin(:float)) do
+      {:backprop, [put_reg(regs, right, builtin(:float)), put_reg(regs, right, builtin(:integer))]}
+    end
+
+    forward(regs, _meta, ...) when not is_defined(regs, right) and is_reg(regs, left, builtin(:integer)) do
+      {:backprop, [put_reg(regs, right, builtin(:float))]}
+    end
+
     forward(regs, _meta, ...) do
-      cond do
-        # TODO: make this a guard.
-        not is_defined(regs, left) ->
-          {:backprop, Enum.map(@int_types ++ @num_types, &put_reg(regs, left, &1))}
-        not is_defined(regs, right) and fetch_type(regs, left) in @int_types ->
-          {:backprop, Enum.map(@int_types, &put_reg(regs, right, &1))}
-        not is_defined(regs, right) and fetch_type(regs, left) == builtin(:float) ->
-          {:backprop, [put_reg(regs, right, builtin(:float)), put_reg(regs, right, builtin(:integer))]}
-        not is_defined(regs, right) and fetch_type(regs, left) == builtin(:integer) ->
-          {:backprop, [put_reg(regs, right, builtin(:float))]}
-        true ->
-          ltype = fetch_type(regs, left)
-          rtype = fetch_type(regs, right)
-          res = do_sub(ltype, rtype)
-          {:ok, put_reg(regs, to, res)}
-      end
+      ltype = fetch_type(regs, left)
+      rtype = fetch_type(regs, right)
+      res = do_sub(ltype, rtype)
+      {:ok, put_reg(regs, to, res)}
     end
 
     # a temporary lie.
@@ -191,23 +199,27 @@ defmodule Type.Inference.Opcodes.GcBifs do
   defp do_mul(builtin(:integer), t) when t in @all_int_types,        do: builtin(:integer)
 
   opcode {:gc_bif, :*, _, _, [left, right], to} do
+    forward(regs, _meta, ...) when not is_defined(regs, left) do
+      {:backprop, Enum.map(@int_types ++ @num_types, &put_reg(regs, left, &1))}
+    end
+
+    forward(regs, _meta, ...) when not is_defined(regs, right) and is_reg_in(regs, left, @int_types) do
+      {:backprop, Enum.map(@int_types, &put_reg(regs, right, &1))}
+    end
+
+    forward(regs, _meta, ...) when not is_defined(regs, right) and is_reg(regs, left, builtin(:float)) do
+      {:backprop, [put_reg(regs, right, builtin(:float)), put_reg(regs, right, builtin(:integer))]}
+    end
+
+    forward(regs, _meta, ...) when not is_defined(regs, right) and is_reg(regs, left, builtin(:integer)) do
+      {:backprop, [put_reg(regs, right, builtin(:float))]}
+    end
+
     forward(regs, _meta, ...) do
-      cond do
-        # TODO: make this a guard.
-        not is_defined(regs, left) ->
-          {:backprop, Enum.map(@int_types ++ @num_types, &put_reg(regs, left, &1))}
-        not is_defined(regs, right) and fetch_type(regs, left) in @int_types ->
-          {:backprop, Enum.map(@int_types, &put_reg(regs, right, &1))}
-        not is_defined(regs, right) and fetch_type(regs, left) == builtin(:float) ->
-          {:backprop, [put_reg(regs, right, builtin(:float)), put_reg(regs, right, builtin(:integer))]}
-        not is_defined(regs, right) and fetch_type(regs, left) == builtin(:integer) ->
-          {:backprop, [put_reg(regs, right, builtin(:float))]}
-        true ->
-          ltype = fetch_type(regs, left)
-          rtype = fetch_type(regs, right)
-          res = do_mul(ltype, rtype)
-          {:ok, put_reg(regs, to, res)}
-      end
+      ltype = fetch_type(regs, left)
+      rtype = fetch_type(regs, right)
+      res = do_mul(ltype, rtype)
+      {:ok, put_reg(regs, to, res)}
     end
 
     # a temporary lie.
