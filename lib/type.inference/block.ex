@@ -127,22 +127,26 @@ defmodule Type.Inference.Block.Parser do
     Type.Inference.Opcodes.Terminal]
 
   @spec do_analyze(t, op_module) :: t
-  def do_analyze(state, opcode_modules \\ @default_opcode_modules)
+  def do_analyze(state, opcode_modules \\ nil)
   def do_analyze(state = %{code: []}, _), do: state
-  def do_analyze(state, opcode_modules) do
+  def do_analyze(state, opcode_modules!) do
+    opcode_modules! = opcode_modules! || @default_opcode_modules
+
     state
-    |> do_forward(opcode_modules)
+    |> do_forward(opcode_modules!)
     |> log_forward
-    |> do_analyze(opcode_modules)
+    |> do_analyze(opcode_modules!)
   end
 
   @spec do_forward(t, op_module) :: t
-  def do_forward(state, opcode_modules \\ @default_opcode_modules)
-  def do_forward(state = %{code: [opcode | _]}, opcode_modules) do
+  def do_forward(state, opcode_modules \\ nil)
+  def do_forward(state = %{code: [opcode | _]}, opcode_modules!) do
+    opcode_modules! = opcode_modules! || @default_opcode_modules
+
     new_histories = Enum.flat_map(state.histories,
       fn history = [latest | earlier] ->
         opcode
-        |> reduce_forward(latest, state.meta, opcode_modules)
+        |> reduce_forward(latest, state.meta, opcode_modules!)
         |> validate_forward  # prevents stupid mistakes
         |> case do
           {:ok, new_regs} -> prep_ok(new_regs, length(state.stack), history)
@@ -150,7 +154,11 @@ defmodule Type.Inference.Block.Parser do
             do_all_backprop(state,
                             replacement_regs,
                             earlier,
-                            opcode_modules)
+                            opcode_modules!)
+          :noop -> [[latest | history]]
+          :unimplemented ->
+            IO.warn("forward mode for the opcode #{inspect opcode} is not implemented yet.", [])
+            [[latest | history]]
           :no_return -> []
           :unknown ->
             raise Type.UnknownOpcodeError, opcode: opcode
@@ -172,8 +180,7 @@ defmodule Type.Inference.Block.Parser do
     {:ok, Registers.t} |
     {:ok, [Registers.t | {:freeze, Registers.t}]} |
     {:backprop, [Registers.t]} |
-    :no_return |
-    :unknown
+    :noop | :unimplemented | :no_return | :unknown
 
   # ignore frozen register histories.
   defp reduce_forward(_instr, latest = %{freeze: freeze}, _meta, _mods)
@@ -217,6 +224,14 @@ defmodule Type.Inference.Block.Parser do
       |> case do
         {:ok, new_starting_points} ->
           Enum.map(new_starting_points, &[&1 | earlier])
+        :noop ->
+          [[latest | earlier]]
+        :unimplemented ->
+          IO.warn("backprop mode for the opcode #{inspect opcode} is not implemented yet.", [])
+          [[latest | earlier]]
+        :no_return -> []
+        :unknown ->
+          raise Type.UnknownOpcodeError, opcode: opcode
       end
     end)
     # continue to backprop until we run out of stack.
@@ -225,7 +240,8 @@ defmodule Type.Inference.Block.Parser do
     |> do_backprop(opcode_modules)
   end
 
-  @spec reduce_backprop(term, Registers.t, map, op_module) :: {:ok, [Registers.t]}
+  @spec reduce_backprop(term, Registers.t, map, op_module) ::
+    {:ok, [Registers.t]} | :noop | :unimplemented | :no_return | :unknown
   defp reduce_backprop(opcode, latest, meta, opcode_modules) do
     opcode_modules
     |> List.wrap
@@ -258,19 +274,22 @@ defmodule Type.Inference.Block.Parser do
   ## TESTING CONVENIENCES
 
   if Mix.env() == :test do
+
+    @shortforms ~w(noop unimplemented no_return unknown)a
+
     defp validate_forward(fwd = {:ok, %Registers{}}), do: fwd
     defp validate_forward(fwd = {:ok, [%Registers{} | _]}), do: fwd
     defp validate_forward(fwd = {:ok, [{:freeze, %Registers{}} | _]}), do: fwd
     defp validate_forward(bck = {:backprop, [%Registers{} | _]}), do: bck
     defp validate_forward(bck = {:backprop, []}), do: bck
-    defp validate_forward(:no_return), do: :no_return
-    defp validate_forward(:unknown), do: :unknown
-    defp validate_forward(xxx) do
-      raise "invalid forward result #{inspect xxx}"
+    defp validate_forward(short) when short in @shortforms, do: short
+    defp validate_forward(invalid) do
+      raise "invalid forward result #{inspect invalid}"
     end
 
     defp validate_backprop(bck = {:ok, []}), do: bck
     defp validate_backprop(bck = {:ok, [%Registers{} | _]}), do: bck
+    defp validate_backprop(short) when short in @shortforms, do: short
     defp validate_backprop(bck) do
       raise "invalid backprop result #{inspect bck}"
     end

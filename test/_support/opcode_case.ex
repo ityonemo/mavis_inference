@@ -3,12 +3,13 @@ defmodule TypeTest.OpcodeCase do
   alias Type.Inference.Block.Parser
   alias Type.Inference.Registers
 
-  @spec fast_forward(Parser.t) :: Parser.t
-  def fast_forward(state = %{code: []}), do: state
-  def fast_forward(state) do
+  @spec fast_forward(Parser.t, module) :: Parser.t
+  def fast_forward(state, module \\ nil)
+  def fast_forward(state = %{code: []}, _module), do: state
+  def fast_forward(state, module) do
     state
-    |> Parser.do_forward
-    |> fast_forward
+    |> Parser.do_forward(module)
+    |> fast_forward(module)
   end
 
   @spec history_start(Parser.t, non_neg_integer) :: Registers.t
