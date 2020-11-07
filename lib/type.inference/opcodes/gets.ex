@@ -19,7 +19,7 @@ defmodule Type.Inference.Opcodes.Gets do
   opcode {:get_list, from, head, tail} do
     forward(regs, _meta, ...) when not is_defined(regs, from) do
       {:backprop, [put_reg(regs, from, %Type.List{nonempty: true, final: builtin(:any)})]}
-    do
+    end
 
     forward(regs, _meta, ...) do
       from_type = fetch_type(regs, from)

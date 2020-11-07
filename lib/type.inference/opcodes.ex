@@ -5,6 +5,19 @@ defmodule Type.Inference.Opcodes do
   - debug_dump_code: if true then dumps the code at the end.
   """
 
+  @enforce_keys [:opcode_ast, :guard_ast]
+  defstruct @enforce_keys
+
+  @typedoc """
+  describes the external framework describing properties common to
+  all forward and backprop functions generated relative to a single
+  opcode descriptor
+  """
+  @type t :: %__MODULE__{
+    opcode_ast: Macro.t,
+    guard_ast: Macro.t | nil
+  }
+
   defmodule Operations do
     @enforce_keys ~w(type opcode_ast code_ast)a
     defstruct @enforce_keys ++ [reg_ast: nil, meta_ast: nil, guard_ast: nil]
@@ -65,10 +78,13 @@ defmodule Type.Inference.Opcodes do
 
       import Type.Inference.Opcodes, only: [
         # key macros
-        opcode: 2, forward: 4, forward: 3, forward: 1,
+        opcode: 2, opcode: 3,
+        forward: 4, forward: 3, forward: 1,
         backprop: 4, backprop: 3, backprop: 1,
         # key helpers
-        put_reg: 3, fetch_type: 2, merge_reg: 2, tombstone: 2, is_defined: 2]
+        put_reg: 3, fetch_type: 2, merge_reg: 2, tombstone: 2,
+        # guards
+        is_defined: 2, is_reg: 3, is_reg_in: 3]
 
       Module.register_attribute(__MODULE__, :operations, accumulate: true)
 
@@ -102,35 +118,73 @@ defmodule Type.Inference.Opcodes do
 
   ### KEY MACROS
 
-  defmacro opcode(opcode_ast, do: {:__block__, meta, code}) do
-    Module.put_attribute(__CALLER__.module, :current_opcode, opcode_ast)
+  @reg {:reg, [], Elixir}
+
+  defmacro opcode(opcode_ast, whens \\ [], block)
+  defmacro opcode(opcode_ast, whens, do: {:__block__, meta, code}) do
+    set_opcode(__CALLER__.module, opcode_ast, whens[:when])
 
     rewritten_code = Enum.map(code, &rewrite_whens/1)
 
     {:__block__, meta, rewritten_code}
   end
-  defmacro opcode(opcode_ast, do: opcode_block_ast) do
-    Module.put_attribute(__CALLER__.module, :current_opcode, opcode_ast)
+  defmacro opcode(opcode_ast, whens, do: opcode_block_ast) do
+    set_opcode(__CALLER__.module, opcode_ast, whens[:when])
 
-    opcode_block_ast
+    rewrite_whens(opcode_block_ast)
   end
-  defmacro opcode(opcode_ast, :unimplemented) do
-    a = assemble_noop(opcode_ast, :forward, warn: "the opcode #{Macro.to_string opcode_ast} is not implemented yet.")
-    b = assemble_noop(opcode_ast, :backprop)
+  defmacro opcode(opcode_ast, whens, :unimplemented) do
+    module = __CALLER__.module
+    set_opcode(module, opcode_ast, whens[:when])
+
+    warning = "the opcode #{Macro.to_string opcode_ast} is not implemented yet."
 
     quote do
-      @forward unquote(Macro.escape(a))
-      @backprop unquote(Macro.escape(b))
+      unquote(stash(
+        module,
+        type: :forward,
+        reg_ast: @reg,
+        code_ast: {:ok, @reg}
+      ))
+      unquote(stash(
+        module,
+        type: :backprop,
+        reg_ast: @reg,
+        code_ast: {:ok, @reg}
+      ))
     end
   end
-  defmacro opcode(opcode_ast, :noop) do
-    a = assemble_noop(opcode_ast, :forward)
-    b = assemble_noop(opcode_ast, :backprop)
+  defmacro opcode(opcode_ast, whens, :noop) do
+    module = __CALLER__.module
+    set_opcode(module, opcode_ast, whens[:when])
 
     quote do
-      @forward unquote(Macro.escape(a))
-      @backprop unquote(Macro.escape(b))
+      unquote(stash(
+        module,
+        type: :forward,
+        reg_ast: @reg,
+        code_ast: {:ok, @reg}
+      ))
+      unquote(stash(
+        module,
+        type: :backprop,
+        reg_ast: @reg,
+        code_ast: {:ok, @reg}
+      ))
     end
+  end
+
+  defp rewrite_whens({:when, _meta,
+      [{type, _, [state_ast, meta_ast, {:..., _, _}]}, clauses]}) do
+    quote do unquote(type)(unquote(state_ast), unquote(meta_ast), unquote(clauses)) end
+  end
+  defp rewrite_whens(code), do: code
+
+  defp set_opcode(module, opcode_ast, guard_ast) do
+    Module.put_attribute(module, :current_opcode, %__MODULE__{
+      opcode_ast: opcode_ast,
+      guard_ast: guard_ast
+    })
   end
 
   defmacro forward(reg_ast, meta_ast, {:..., _, _}, do: code_ast) do
@@ -186,53 +240,65 @@ defmodule Type.Inference.Opcodes do
     quote do end
   end
 
-  defp make_warn(string) do quote do IO.warn(unquote(string)) end end
-  defp assemble_noop(opcode_ast, symbol, opts \\ []) do
-    warning = case opts[:warn] do
-      true -> make_warn("the method #{symbol} for opcode #{Macro.to_string opcode_ast} is not implemented.")
-      nil -> nil
-      false -> nil
-      _ -> make_warn(opts[:warn])
-    end
-
-    ok_state = case symbol do
-      :forward -> {:ok, {:state, [], Elixir}}
-      :backprop -> {:ok, [{:state, [], Elixir}]}
-    end
-
-    {:def, [context: Elixir, import: Kernel],
-    [
-      {symbol, [context: Elixir], [opcode_ast, {:state, [], Elixir}, {:_meta, [], Elixir}]},
-      [do: {:__block__, [], [warning, ok_state]}]
-    ]}
-  end
-
   @typep stash_params :: [
     type: :forward | :backprop,
     code_ast: Macro.t | :noop | :unimplemented,
     reg_ast: Macro.t | nil,
     meta_ast: Macro.t | nil,
-    when_clauses: Macro.t | nil
+    guard_ast: Macro.t | nil
   ]
 
   @spec stash(module, stash_params) :: Macro.t
-  defp stash(module, params) do
+  defp stash(module, params!) do
     current_opcode = Module.get_attribute(module, :current_opcode)
-    operation = struct(Operations, params ++ [opcode_ast: current_opcode])
+
+    params! = Keyword.merge(params!,
+      opcode_ast: current_opcode.opcode_ast,
+      guard_ast: guard_merge(params![:guard_ast], current_opcode.guard_ast)
+    )
+
+    operation = Operations
+    |> struct(params!)
+    |> Macro.escape
+    
     quote do
-      @operations unquote(Macro.escape(operation))
+      @operations unquote(operation)
     end
   end
 
-  # exports
-  defguard is_defined(state, reg) when
-    is_nil(reg) or
-    (is_tuple(reg) and (elem(reg, 0) in [:atom, :integer, :literal])) or
-    (is_tuple(reg) and
-    (reg
+  defp guard_merge(nil, nil), do: nil
+  defp guard_merge(grd, nil), do: grd
+  defp guard_merge(nil, grd), do: grd
+  defp guard_merge(gra, grb) do
+    {:and, [], [gra, grb]}
+  end
+
+  ###########################################################################
+  # EXPORTED GUARDS, MACROS, and FUNCTIONS
+
+  defguard is_defined(regs, reg_or_const) when
+    is_nil(reg_or_const) or
+    (is_tuple(reg_or_const) and
+    (elem(reg_or_const, 0) in [:atom, :integer, :literal])) or
+    (is_tuple(reg_or_const) and
+    (reg_or_const
     |> elem(0)
-    |> :erlang.map_get(state)
-    |> is_map_key(elem(reg, 1))))
+    |> :erlang.map_get(regs)
+    |> is_map_key(elem(reg_or_const, 1))))
+
+  defguard is_reg(regs, reg, value) when
+    (reg
+    |> elem(1)
+    |> :erlang.map_get(:erlang.map_get(elem(reg, 0), regs))) == value
+
+  defmacro is_reg_in(regs, reg, list) do
+    quote do
+      (unquote(reg)
+      |> elem(1)
+      |> :erlang.map_get(
+        :erlang.map_get(elem(unquote(reg), 0), unquote(regs)))) in unquote(list)
+    end
+  end
 
   def fetch_type(state, {:x, reg}), do: state.x[reg]
   def fetch_type(state, {:y, reg}), do: state.y[reg]
@@ -249,6 +315,9 @@ defmodule Type.Inference.Opcodes do
   def tombstone(state, register) do
     %{state | x: Map.delete(state.x, register)}
   end
+
+  ####################################################################
+  ## Private functions
 
   defp filter_params(opcode_ast, code_ast) do
     unused = opcode_ast
@@ -288,12 +357,6 @@ defmodule Type.Inference.Opcodes do
   defp substitute(atom, unused) do
     if atom in unused, do: String.to_atom("_#{atom}"), else: atom
   end
-
-  defp rewrite_whens({:when, _meta,
-      [{type, _, [state_ast, meta_ast, {:..., _, _}]}, clauses]}) do
-    quote do unquote(type)(unquote(state_ast), unquote(meta_ast), unquote(clauses)) end
-  end
-  defp rewrite_whens(code), do: code
 
   defp split({guard, meta, args}) do
     last_arg = List.last(args)

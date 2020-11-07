@@ -4,21 +4,19 @@ defmodule TypeTest.Abstract.OpcodeGuardTest do
 
   import ExUnit.CaptureIO
 
-  use Type.Inference.Opcodes, debug_dump_code: true
+  use Type.Inference.Opcodes
 
   @moduletag :abstract
 
   alias Type.Inference.Block.Parser
 
-  import Type
-
   describe "an opcode with a forward guard" do
     opcode :fwd_guard do
-      forward(state, _meta, ...) when is_defined(state, {:x, 0}) do
-        {:ok, put_reg(state, {:x, 0}, :defined)}
+      forward(regs, _meta, ...) when is_defined(regs, {:x, 0}) do
+        {:ok, put_reg(regs, {:x, 0}, :defined)}
       end
-      forward(state, _meta, ...) do
-        {:ok, put_reg(state, {:x, 0}, :not_defined)}
+      forward(regs, _meta, ...) do
+        {:ok, put_reg(regs, {:x, 0}, :not_defined)}
       end
     end
 
@@ -39,15 +37,15 @@ defmodule TypeTest.Abstract.OpcodeGuardTest do
 
   describe "an opcode with a backprop guard" do
     opcode :bck_guard do
-      forward(state, _meta, ...) do
-        {:ok, state}
+      forward(regs, _meta, ...) do
+        {:ok, regs}
       end
 
-      backprop(state, _meta, ...) when is_defined(state, {:x, 0}) do
-        {:ok, [put_reg(state, {:x, 0}, :defined)]}
+      backprop(regs, _meta, ...) when is_defined(regs, {:x, 0}) do
+        {:ok, [put_reg(regs, {:x, 0}, :defined)]}
       end
-      backprop(state, _meta, ...) do
-        {:ok, [put_reg(state, {:x, 0}, :undefined)]}
+      backprop(regs, _meta, ...) do
+        {:ok, [put_reg(regs, {:x, 0}, :undefined)]}
       end
     end
 
@@ -66,5 +64,56 @@ defmodule TypeTest.Abstract.OpcodeGuardTest do
       |> Parser.do_backprop(__MODULE__)
       |> history_start
     end
+  end
+
+  describe "a guard in the opcode" do
+    opcode any_code, when: any_code in [:code_1, :code_2] do
+      forward(regs, _meta, ...) do
+        {:ok, put_reg(regs, {:x, 0}, any_code)}
+      end
+    end
+
+    test "can use one of the opcodes" do
+      assert %{x: %{0 => :code_1}} = [:code_1]
+      |> Parser.new
+      |> Parser.do_forward(__MODULE__)
+      |> history_finish
+    end
+
+    test "can use the other opcode" do
+      assert %{x: %{0 => :code_2}} = [:code_2]
+      |> Parser.new
+      |> Parser.do_forward(__MODULE__)
+      |> history_finish
+    end
+  end
+
+  describe "guards in both the opcode and a operation" do
+    opcode {:both_guard, reg}, when: elem(reg, 0) == :x do
+      forward(regs, _meta, ...) when is_defined(regs, reg) do
+        {:ok, put_reg(regs, reg, :foo)}
+      end
+    end
+
+    opcode {:both_guard, lit} do
+      forward(regs, _meta, ...) do
+        {:ok, put_reg(regs, {:x, 0}, fetch_type(regs, lit))}
+      end
+    end
+
+    test "performs the first case correctly" do
+      assert %{x: %{1 => :foo}} = [{:both_guard, {:x, 1}}]
+      |> Parser.new(preload: %{1 => :bar})
+      |> Parser.do_forward(__MODULE__)
+      |> history_finish
+    end
+
+    test "performs the second case correctly" do
+      assert %{x: %{0 => :bar}} = [{:both_guard, {:atom, :bar}}]
+      |> Parser.new
+      |> Parser.do_forward(__MODULE__)
+      |> history_finish
+    end
+
   end
 end
