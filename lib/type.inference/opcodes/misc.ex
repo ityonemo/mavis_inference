@@ -1,6 +1,6 @@
 defmodule Type.Inference.Opcodes.Misc do
 
-  use Type.Inference.Macros
+  use Type.Inference.Opcodes
 
   alias Type.Inference.Module.ParallelParser
 

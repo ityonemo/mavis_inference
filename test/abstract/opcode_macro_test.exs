@@ -4,7 +4,7 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
 
   @completely_empty_opcode_module """
   defmodule TypeTest.EOM do
-    use Type.Inference.Macros
+    use Type.Inference.Opcodes
   end
   """
 
@@ -30,7 +30,7 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
 
   @unused_term_fwd_check """
   defmodule TypeTest.MTF1 do
-    use Type.Inference.Macros
+    use Type.Inference.Opcodes
 
     opcode {:fwd_no, a} do
       forward(state, _meta, ...) do
@@ -54,7 +54,7 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
 
   @unused_term_fwd_match_check """
   defmodule TypeTest.MTF2 do
-    use Type.Inference.Macros
+    use Type.Inference.Opcodes
 
     opcode {:fwd_no, a} do
       forward(state = %{foo: a}, _meta, ...) do
@@ -78,7 +78,7 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
 
   @unused_term_bck_check """
   defmodule TypeTest.MTB1 do
-    use Type.Inference.Macros
+    use Type.Inference.Opcodes
 
     opcode {:bck_no, a} do
       forward(state, _meta, ...) do
@@ -102,7 +102,7 @@ defmodule TypeTest.Abstract.OpcodeMacroTest do
 
   @unused_term_bck_match_check """
   defmodule TypeTest.MTB2 do
-    use Type.Inference.Macros
+    use Type.Inference.Opcodes
 
     opcode {:bck_no, a} do
       forward(state, _meta, ...) do

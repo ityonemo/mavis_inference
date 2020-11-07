@@ -2,7 +2,7 @@ defmodule TypeTest.Abstract.OpcodeFrameworkTest do
   use ExUnit.Case, async: true
   import ExUnit.CaptureIO
 
-  use Type.Inference.Macros
+  use Type.Inference.Opcodes
 
   @moduletag :abstract
 

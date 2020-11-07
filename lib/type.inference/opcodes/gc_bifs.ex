@@ -1,8 +1,5 @@
 defmodule Type.Inference.Opcodes.GcBifs do
-
-  import Type, only: :macros
-
-  use Type.Inference.Macros
+  use Type.Inference.Opcodes
 
   opcode {:gc_bif, :bit_size, _, _, [from], to} do
     forward(state, _meta, ...) do

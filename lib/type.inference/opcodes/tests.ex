@@ -1,8 +1,5 @@
 defmodule Type.Inference.Opcodes.Tests do
-
-  import Type, only: :macros
-
-  use Type.Inference.Macros
+  use Type.Inference.Opcodes
 
   alias Type.Inference.Module.ParallelParser
 

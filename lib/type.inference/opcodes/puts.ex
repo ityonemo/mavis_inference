@@ -1,8 +1,5 @@
 defmodule Type.Inference.Opcodes.Puts do
-
-  import Type, only: :macros
-
-  use Type.Inference.Macros
+  use Type.Inference.Opcodes
 
   opcode {:put_list, head, tail, to} do
     forward(state, _meta, ...) do

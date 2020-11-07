@@ -1,8 +1,5 @@
 defmodule Type.Inference.Opcodes.Move do
-
-  import Type, only: :macros
-
-  use Type.Inference.Macros
+  use Type.Inference.Opcodes
 
   # MOVE SEMANTICS
 

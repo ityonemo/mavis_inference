@@ -3,7 +3,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
 
   @moduletag :abstract
 
-  use Type.Inference.Macros
+  use Type.Inference.Opcodes
 
   alias Type.Inference.Block.Parser
   alias Type.Inference.Registers

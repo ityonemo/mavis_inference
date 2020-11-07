@@ -1,8 +1,5 @@
 defmodule Type.Inference.Opcodes.Bifs do
-
-  import Type, only: :macros
-
-  use Type.Inference.Macros
+  use Type.Inference.Opcodes
 
   opcode {:bif, :self, :nofail, [], to} do
     forward(state, meta, ...) do

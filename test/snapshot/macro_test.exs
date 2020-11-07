@@ -12,7 +12,7 @@ defmodule TypeTest.Snapshot.MacroTest do
         {:ok, put_reg(state, {:x, 0}, return)}
       end
 
-      vars = Type.Inference.Macros.get_variables(q)
+      vars = Type.Inference.Opcodes.get_variables(q)
 
       assert :fun in vars
       assert :return in vars
