@@ -4,18 +4,17 @@ defmodule Type.Inference.Opcodes.Move do
   # MOVE SEMANTICS
 
   opcode {:move, from = {:x, _}, to} do
-    forward(state, _meta, ...) do
-      if is_defined(state, from) do
-        {:ok, put_reg(state, to, fetch_type(state, from))}
-      else
-        # we don't, a priori know what the datatype here is.
-        {:backprop, [put_reg(state, from, builtin(:any))]}
-      end
+    forward(regs, _meta, ...) when not is_defined(regs, from) do
+      {:backprop, [put_reg(regs, from, builtin(:any))]}
     end
 
-    backprop(state, _meta, ...) do
-      prev_state = state
-      |> put_reg(from, fetch_type(state, to))
+    forward(regs, _meta, ...) do
+      {:ok, put_reg(regs, to, fetch_type(regs, from))}
+    end
+
+    backprop(regs, _meta, ...) do
+      prev_state = regs
+      |> put_reg(from, fetch_type(regs, to))
       |> tombstone(to)
 
       {:ok, [prev_state]}
@@ -23,30 +22,29 @@ defmodule Type.Inference.Opcodes.Move do
   end
 
   opcode {:move, value, to} do
-    forward(state, _meta, ...) do
-      {:ok, put_reg(state, to, fetch_type(state, value))}
+    forward(regs, _meta, ...) do
+      {:ok, put_reg(regs, to, fetch_type(regs, value))}
     end
-    backprop(state, _meta, ...) do
-      {:ok, [tombstone(state, to)]}
+    backprop(regs, _meta, ...) do
+      {:ok, [tombstone(regs, to)]}
     end
   end
 
   opcode {:swap, left, right} do
-    forward(state, _meta, ...) do
-      cond do
-        not is_defined(state, left) ->
-          {:backprop, [put_reg(state, left, builtin(:any))]}
+    forward(regs, _meta, ...) when not is_defined(regs, left) do
+      {:backprop, [put_reg(regs, left, builtin(:any))]}
+    end
 
-        not is_defined(state, right) ->
-          {:backprop, [put_reg(state, right, builtin(:any))]}
+    forward(regs, _meta, ...) when not is_defined(regs, right) do
+      {:backprop, [put_reg(regs, right, builtin(:any))]}
+    end
 
-        true ->
-          end_state = state
-          |> put_reg(right, fetch_type(state, left))
-          |> put_reg(left, fetch_type(state, right))
+    forward(regs, _meta, ...) do
+      end_state = regs
+      |> put_reg(right, fetch_type(regs, left))
+      |> put_reg(left, fetch_type(regs, right))
 
-          {:ok, end_state}
-      end
+      {:ok, end_state}
     end
   end
 

@@ -4,7 +4,7 @@ defmodule Type.Inference.Opcodes.Terminal do
   alias Type.Inference.Module.ParallelParser
 
   opcode {:select_val, from, {:f, _fail}, {:list, list}} do
-    forward(state, _meta, ...) do
+    forward(regs, _meta, ...) do
       # TODO: fix this so that it merges instead of
       # clobbering, for example if we have two String.t's coming
       # in with different jump registers.
@@ -15,18 +15,18 @@ defmodule Type.Inference.Opcodes.Terminal do
       end)
       |> Enum.into(%{})
 
-      if is_defined(state, from) do
-        jump_reg = fetch_type(state, from)
+      if is_defined(regs, from) do
+        jump_reg = fetch_type(regs, from)
 
         result_type = ParallelParser.obtain_label(select_table[jump_reg])
         |> Enum.map(&(&1.makes))
         |> Type.union()
 
-        {:ok, put_reg(state, {:x, 0}, result_type)}
+        {:ok, put_reg(regs, {:x, 0}, result_type)}
       else
         type_table = select_table
         |> Map.keys
-        |> Enum.map(&put_reg(state, from, &1))
+        |> Enum.map(&put_reg(regs, from, &1))
 
         {:backprop, type_table}
       end
@@ -42,11 +42,11 @@ defmodule Type.Inference.Opcodes.Terminal do
   defp evaluate_jump({:f, int}), do: int
 
   opcode :return do
-    forward(state = %{x: %{0 => _type}}, _meta, ...) do
-      {:ok, state}
+    forward(regs = %{x: %{0 => _type}}, _meta, ...) do
+      {:ok, regs}
     end
-    forward(state = %{x: %{}}, _meta, ...) do
-      {:backprop, [put_reg(state, {:x, 0}, builtin(:any))]}
+    forward(regs = %{x: %{}}, _meta, ...) do
+      {:backprop, [put_reg(regs, {:x, 0}, builtin(:any))]}
     end
 
     backprop :terminal
@@ -55,21 +55,21 @@ defmodule Type.Inference.Opcodes.Terminal do
   opcode {:line, _}, :noop
 
   opcode {:func_info, _, _, _} do
-    forward(state, _meta, ...) do
-      {:ok, put_reg(state, {:x, 0}, builtin(:none))}
+    forward(regs, _meta, ...) do
+      {:ok, put_reg(regs, {:x, 0}, builtin(:none))}
     end
 
     backprop :terminal
   end
 
   opcode {:jump, {:f, dest}} do
-    forward(state, _meta, ...) do
+    forward(regs, _meta, ...) do
       [jump_blk] = ParallelParser.obtain_label(dest)
 
-      if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(state, {:x, &1}))) do
-        {:backprop, [put_reg(state, reg, jump_blk.needs[reg])]}
+      if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(regs, {:x, &1}))) do
+        {:backprop, [put_reg(regs, reg, jump_blk.needs[reg])]}
       else
-        {:ok, put_reg(state, {:x, 0}, jump_blk.makes)}
+        {:ok, put_reg(regs, {:x, 0}, jump_blk.makes)}
       end
     end
 
@@ -77,13 +77,13 @@ defmodule Type.Inference.Opcodes.Terminal do
   end
 
   opcode {:wait, {:f, dest}} do
-    forward(state, _meta, ...) do
+    forward(regs, _meta, ...) do
       [jump_blk] = ParallelParser.obtain_label(dest)
 
-      if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(state, {:x, &1}))) do
-        {:backprop, [put_reg(state, reg, jump_blk.needs[reg])]}
+      if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(regs, {:x, &1}))) do
+        {:backprop, [put_reg(regs, reg, jump_blk.needs[reg])]}
       else
-        {:ok, put_reg(state, {:x, 0}, jump_blk.makes)}
+        {:ok, put_reg(regs, {:x, 0}, jump_blk.makes)}
       end
     end
 

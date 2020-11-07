@@ -4,12 +4,12 @@ defmodule Type.Inference.Opcodes.Gets do
   alias Type.Inference.Module.ParallelParser
 
   opcode {:get_tuple_element, from, index, to} do
-    forward(state, _meta, ...) do
-      case fetch_type(state, from) do
+    forward(regs, _meta, ...) do
+      case fetch_type(regs, from) do
         %Type.Tuple{elements: els} when length(els) > index ->
-          {:ok, put_reg(state, to, Enum.at(els, index))}
+          {:ok, put_reg(regs, to, Enum.at(els, index))}
         _ ->
-          raise "get_tuple element #{inspect from} #{inspect index} #{inspect to} failed for #{state}"
+          raise "get_tuple element #{inspect from} #{inspect index} #{inspect to} failed for #{regs}"
       end
     end
 
@@ -17,14 +17,14 @@ defmodule Type.Inference.Opcodes.Gets do
   end
 
   opcode {:get_list, from, head, tail} do
-    forward(state, _meta, ...) when not is_defined(state, from) do
-      {:backprop, [put_reg(state, from, %Type.List{nonempty: true, final: builtin(:any)})]}
+    forward(regs, _meta, ...) when not is_defined(regs, from) do
+      {:backprop, [put_reg(regs, from, %Type.List{nonempty: true, final: builtin(:any)})]}
     do
 
-    forward(state, _meta, ...) do
-      from_type = fetch_type(state, from)
+    forward(regs, _meta, ...) do
+      from_type = fetch_type(regs, from)
 
-      new_state = state
+      new_state = regs
       |> put_reg(head, from_type.type)
       |> put_reg(tail, Type.union(from_type, from_type.final))
 
@@ -35,14 +35,14 @@ defmodule Type.Inference.Opcodes.Gets do
   end
 
   opcode {:get_tl, from, to} do
-    forward(state, _meta, ...) when not is_defined(state, from) do
-      {:backprop, [put_reg(state, from, %Type.List{nonempty: true, final: builtin(:any)})]}
-    do
+    forward(regs, _meta, ...) when not is_defined(regs, from) do
+      {:backprop, [put_reg(regs, from, %Type.List{nonempty: true, final: builtin(:any)})]}
+    end
 
-    forward(state, _meta, ...) do
-      from_type = fetch_type(state, from)
+    forward(regs, _meta, ...) do
+      from_type = fetch_type(regs, from)
 
-      {:ok, put_reg(state, to, Type.union(from_type, from_type.final))}
+      {:ok, put_reg(regs, to, Type.union(from_type, from_type.final))}
     end
 
     backprop :terminal
