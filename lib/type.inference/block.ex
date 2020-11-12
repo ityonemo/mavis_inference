@@ -2,6 +2,8 @@ defmodule Type.Inference.Block do
   @enforce_keys [:needs, :makes]
   defstruct @enforce_keys
 
+  @type label :: pos_integer
+
   @type t :: [%__MODULE__{
     needs: %{optional(integer) => Type.t},
     makes: Type.t

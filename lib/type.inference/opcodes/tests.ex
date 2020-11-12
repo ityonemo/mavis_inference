@@ -276,9 +276,6 @@ defmodule Type.Inference.Opcodes.Tests do
     end
   end
 
-  # TODO: put this into mavis.
-  defguard is_singleton(value) when is_atom(value) or is_integer(value)
-
   opcode {:test, :is_eq, {:f, fail}, [left, right]} do
     forward(regs, _meta, ...) do
       jump_block = ParallelParser.obtain_label(fail)
