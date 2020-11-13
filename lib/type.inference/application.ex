@@ -8,16 +8,15 @@ defmodule Type.Inference.Application do
 
   def start(_type, _args) do
     children = [
-      {DynamicSupervisor,
-        name: Type.Inference.TaskSupervisor,
-        strategy: :one_for_one},
+      {Task.Supervisor,
+        name: Type.Inference.TaskSupervisor},
       {Registry,
         keys: :duplicate,
         name: Type.Inference.Dependency.PubSub},
       {Registry,
         keys: :unique,
         name: Type.Inference.ModuleTracker},
-      Type.Inference.BlockCache
+      Type.Inference.Application.BlockCache
     ]
 
     opts = [strategy: :one_for_one, name: Type.Inference.Supervisor]

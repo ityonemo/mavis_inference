@@ -1,0 +1,61 @@
+defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
+  use ExUnit.Case, async: true
+
+  @moduletag :type_block
+
+  import Type, only: :macros
+  import Mox
+
+  alias Type.Inference.Application.{BlockCache, BlockAnalyzer}
+  alias __MODULE__.BlockInference.Stub
+  alias Type.Inference.Block
+
+  setup_all do
+    defmock(Stub, for: Type.Inference.Block.Parser.Api)
+    :ok
+  end
+
+  setup :verify_on_exit!
+
+  @default_block [%Block{needs: %{}, makes: builtin(:any)}]
+
+  describe "when the analyzer is passed an export" do
+    test "the result is retrievable from the block cache by mfa" do
+      expect(Stub, :parse, fn [:return] -> @default_block end)
+
+      BlockAnalyzer.run({__MODULE__, {:mfa_by_mfa, 1}, 10, [:return]}, Stub)
+
+      # wait till it's finished.
+      assert @default_block == BlockCache.depend_on({__MODULE__, :mfa_by_mfa, 1})
+      # check to make sure it can continue to be retrieved
+      assert @default_block == BlockCache.depend_on({__MODULE__, :mfa_by_mfa, 1})
+      # check to make sure it's been stored unde module/label
+      assert @default_block == BlockCache.depend_on({__MODULE__, 10})
+    end
+
+    test "the result is retrievable from the block cache by label" do
+      expect(Stub, :parse, fn [:return] -> @default_block end)
+
+      BlockAnalyzer.run({__MODULE__, {:mfa_by_label, 1}, 11, [:return]}, Stub)
+
+      # wait till it's finished.
+      assert @default_block == BlockCache.depend_on({__MODULE__, 11})
+      # check to make sure it can continue to be retrieved
+      assert @default_block == BlockCache.depend_on({__MODULE__, 11})
+      # check to make sure it's been stored unde module/label
+      assert @default_block == BlockCache.depend_on({__MODULE__, :mfa_by_label, 1})
+    end
+  end
+
+  describe "when the analyzer is passed a label" do
+    test "the result is retrievable from the block cache by label" do
+      expect(Stub, :parse, fn [:return] -> @default_block end)
+
+      BlockAnalyzer.run({__MODULE__, nil, 12, [:return]}, Stub)
+
+      # check to make sure it's been stored unde module/label
+      assert @default_block == BlockCache.depend_on({__MODULE__, 12})
+    end
+  end
+
+end

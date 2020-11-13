@@ -1,10 +1,10 @@
-defmodule TypeTest.Inference.OTP.ModuleInferenceTest do
+defmodule TypeTest.Inference.OTP.ModuleAnalyzerTest do
   use ExUnit.Case, async: true
 
   @moduletag :type_module
 
   alias Type.Function
-  alias Type.Inference.Application.ModuleInference
+  alias Type.Inference.Application.ModuleAnalyzer
   alias __MODULE__.BlockInference.Stub
 
   import Type
@@ -18,7 +18,7 @@ defmodule TypeTest.Inference.OTP.ModuleInferenceTest do
   end
 
   setup_all do
-    Mox.defmock(Stub, for: Type.Inference.Application.BlockInference.Api)
+    Mox.defmock(Stub, for: Type.Inference.Application.BlockAnalyzer.Api)
     :ok
   end
 
@@ -47,7 +47,7 @@ defmodule TypeTest.Inference.OTP.ModuleInferenceTest do
         send(self(), {:block, {mod, label}, []})
       end)
 
-      ModuleInference.infer(ctx.binary, ctx.module, Stub)
+      ModuleAnalyzer.infer(ctx.binary, ctx.module, Stub)
 
       assert {:function, 1} in sweep().mfa
     end
@@ -67,7 +67,7 @@ defmodule TypeTest.Inference.OTP.ModuleInferenceTest do
         send(self(), {:block, {mod, label}, []})
       end)
 
-      ModuleInference.infer(ctx.binary, ctx.module, Stub)
+      ModuleAnalyzer.infer(ctx.binary, ctx.module, Stub)
 
       assert {:functionp, 1} in sweep().mfa
     end
@@ -87,7 +87,7 @@ defmodule TypeTest.Inference.OTP.ModuleInferenceTest do
         send(self(), {:block, {mod, label}, []})
       end)
 
-      ModuleInference.infer(ctx.binary, ctx.module, Stub)
+      ModuleAnalyzer.infer(ctx.binary, ctx.module, Stub)
 
       assert {:"-fun.functionp/1-", 1} in sweep().mfa
     end

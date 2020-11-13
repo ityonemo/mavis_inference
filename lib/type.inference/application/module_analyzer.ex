@@ -1,6 +1,6 @@
-defmodule Type.Inference.Application.ModuleInference do
+defmodule Type.Inference.Application.ModuleAnalyzer do
 
-  alias Type.Inference.Application.BlockInference
+  alias Type.Inference.Application.BlockAnalyzer
   alias Type.Inference.Application.Depends
 
   def run(module) do
@@ -36,8 +36,8 @@ defmodule Type.Inference.Application.ModuleInference do
   defrecord :beam_file, Record.extract(:beam_file, from_lib: "compiler/src/beam_disasm.hrl")
 
   # TODO: set the correct return value for this.
-  @spec infer(binary, module, block_inference_inj :: module) :: term
-  def infer(binary, module, block_inference \\ BlockInference) do
+  @spec infer(binary, module, block_inference_inj :: module) :: :ok
+  def infer(binary, module, block_analyzer \\ BlockAnalyzer) do
     case :beam_disasm.file(binary) do
       beam_file(module: ^module, code: code) ->
         entry_points = code
@@ -52,7 +52,7 @@ defmodule Type.Inference.Application.ModuleInference do
         raw_opcodes
         |> Enum.flat_map(&opcodes_to_label_blocks(&1, nil, [], []))
         |> Enum.map(fn {label, code} ->
-          block_inference.run({module, entry_points[label], label, code})
+          block_analyzer.run({module, entry_points[label], label, code})
           label
         end)
         |> Enum.each(&Depends.on({module, &1}))

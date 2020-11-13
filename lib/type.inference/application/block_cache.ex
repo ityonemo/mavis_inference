@@ -1,12 +1,9 @@
-defmodule Type.Inference.BlockCache do
+defmodule Type.Inference.Application.BlockCache do
+  @moduledoc false
+
   use GenServer
 
-  # this ETS table holds two different types of K/Vs.
-
-  # first type of K/V is module -> state;
-  #   absent module means "no queries made"
-  #   state :wait means "register request and block till complete"
-  #   state :done means "check the ETS table for the result"
+  @pubsub Type.Inference.Dependency.PubSub
 
   # second type of K/V is mfa -> block
 
@@ -15,69 +12,98 @@ defmodule Type.Inference.BlockCache do
   end
 
   def init(_) do
-    :ets.new(__MODULE__, [:set, :public, :named_table])
-    {:ok, %{}}
+    {:ok, :ets.new(__MODULE__, [:set])}
   end
 
   #######################################################################
   # API
 
-  @spec request(mfa) :: Type.Inference.Block.t
-  def request(mfa = {module, _, _}) do
-    with [{^module, :done}] <- :ets.lookup(__MODULE__, module),
-         [{^mfa, block}] <- :ets.lookup(__MODULE__, mfa) do
-      {:ok, block}
+  ## depend_on
+
+  @spec depend_on(Block.dep) :: Block.t
+  def depend_on(dependency) do
+    # Pull the process's self-identity from the Process dictionary.
+    self_descriptor = Process.get(:block_spec)
+    Registry.register(@pubsub, dependency, self_descriptor)
+    if block = GenServer.call(__MODULE__, {:depend_on, dependency}) do
+      block
     else
-      [{^module, :wait}] ->
-        {:ok, GenServer.call(__MODULE__, {:request, mfa})}
-      [] ->
-        :ets.insert_new(__MODULE__, {module, :wait})
-        fetch_mfa(mfa)
+      wait_for(dependency)
+    end
+  after
+    Registry.unregister(@pubsub, dependency)
+  end
+
+  defp depend_on_impl(dependency, _from, table) do
+    case :ets.match(table, match_for(dependency)) do
+      [[block]] -> {:reply, block, table}
+      [] -> {:reply, nil, table}
     end
   end
 
-  defp request_impl(mfa, from, state) when is_map_key(state, mfa) do
-    {:noreply, Map.put(state, mfa, [from])}
-  end
-  defp request_impl(mfa, from, state) do
-    {:noreply, Map.put(state, mfa, [from, state[mfa]])}
-  end
-
-  @spec report(mfa, Type.Inference.Block.t) :: :ok
-  def report(mfa = {module, _, _}, block) do
-    # first stash it in the ETS table, then make sure that
-    # everyone gets notified.  This prevents a gap period
-    # where someone may make a request that gets unsatisfied.
-    :ets.insert_new(__MODULE__, {mfa, block})
-    :ets.insert(__MODULE__, {module, :done})
-    GenServer.call(__MODULE__, {:report, mfa, block})
+  defp wait_for(dependency) do
+    receive do
+      {:block, ^dependency, block} -> block
+    end
   end
 
-  defp report_impl(mfa, block, _from, state) when is_map_key(state, mfa) do
-    state
-    |> Map.get(mfa)
-    |> Enum.each(fn from ->
-      GenServer.reply(from, block)
+  ## resolve
+
+  @spec resolve(Block.id, Block.t) :: :ok
+  def resolve(block_id, block) do
+    GenServer.call(__MODULE__, {:resolve, block_id, block})
+  end
+  defp resolve_impl(block_id = {module, fa = {_, _}, label}, block, from, table) do
+    :ets.insert(table, insert_for({module, fa}, block))
+    broadcast(block_id, block)
+    resolve_impl({module, nil, label}, block, from, table)
+  end
+  defp resolve_impl(block_id = {module, nil, label}, block, _from, table) do
+    :ets.insert(table, insert_for({module, label}, block))
+    broadcast(block_id, block)
+    {:reply, :ok, table}
+  end
+
+  @spec broadcast(Block.id, Block.t) :: :ok
+  @doc false  # this function is public for testing purposes only.
+  def broadcast({module, nil, label}, block) do
+    dispatch({module, label}, block)
+  end
+  def broadcast({module, {function, arity}, label}, block) do
+    dispatch({module, function, arity}, block)
+    broadcast({module, nil, label}, block)
+  end
+  @spec dispatch(Block.dep, Block.t) :: :ok
+  defp dispatch(key, block) do
+    Registry.dispatch(@pubsub, key, fn entries ->
+      for {pid, _} <- entries, do: send(pid, {:block, key, block})
     end)
-    {:reply, :ok, state}
-  end
-  defp report_impl(_, _, _, state), do: {:reply, :ok, state}
-
-  ############################################################################
-  # WORKERS
-
-  def fetch_mfa(mfa = {module, fun, arity}) do
-    Type.Inference.Module.from_module(module)
-    raise "foo"
   end
 
-  ############################################################################
+  ## ETS HELPERS
+  defp match_for({module, function, arity}) do
+    {{module, function, arity}, :"$1"}
+  end
+  defp match_for({module, label}) do
+    {{module, label}, :"$1"}
+  end
+
+  defp insert_for({module, {function, arity}}, block) do
+    {{module, function, arity}, block}
+  end
+  defp insert_for({module, label}, block) do
+    {{module, label}, block}
+  end
+
+  #############################################################################
   # ROUTER
 
-  def handle_call({:request, mfa}, from, state) do
-    request_impl(mfa, from, state)
+  @impl true
+  def handle_call({:depend_on, dependency}, from, table) do
+    depend_on_impl(dependency, from, table)
   end
-  def handle_report({:report, mfa, block}, from, state) do
-    report_impl(mfa, block, from, state)
+  def handle_call({:resolve, block_id, block}, from, table) do
+    resolve_impl(block_id, block, from, table)
   end
+
 end

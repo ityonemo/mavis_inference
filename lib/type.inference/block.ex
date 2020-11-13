@@ -7,6 +7,9 @@ defmodule Type.Inference.Block do
     makes: Type.t
   }]
 
+  @type id :: {module, {atom, arity} | nil, :beam_asm.label}
+  @type dep :: {module, :beam_asm.label} | mfa
+
   defdelegate parse(code, metadata \\ []), to: Type.Inference.Block.Parser
 
   import Type
@@ -57,6 +60,10 @@ defmodule Type.Inference.Block do
   end
 end
 
+defmodule Type.Inference.Block.Parser.Api do
+  @callback parse([Module.opcode]) :: Block.t
+end
+
 defmodule Type.Inference.Block.Parser do
   @enforce_keys [:code, :histories, :meta]
 
@@ -100,6 +107,8 @@ defmodule Type.Inference.Block.Parser do
       histories: [[%Registers{x: regs}]]}
   end
 
+  @behaviour Type.Inference.Block.Parser.Api
+  @impl true
   @spec parse([Module.opcode], keyword | map) :: Block.t
   def parse(code, metadata \\ []) do
     code
