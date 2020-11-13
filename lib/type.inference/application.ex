@@ -13,8 +13,10 @@ defmodule Type.Inference.Application do
         strategy: :one_for_one},
       {Registry,
         keys: :duplicate,
-        name: Type.Inference.Dependency.PubSub,
-        partitions: System.schedulers_online()},
+        name: Type.Inference.Dependency.PubSub},
+      {Registry,
+        keys: :unique,
+        name: Type.Inference.ModuleTracker},
       Type.Inference.BlockCache
     ]
 

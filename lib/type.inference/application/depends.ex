@@ -4,8 +4,8 @@ defmodule Type.Inference.Application.Depends do
 
   @pubsub Type.Inference.Dependency.PubSub
 
-  @type worker_descriptor :: {{atom, arity} | nil, Block.label}
-  @type client_descriptor :: mfa | {module, Block.label}
+  @type worker_descriptor :: {{atom, arity} | nil, :beam_lib.label}
+  @type client_descriptor :: mfa | {module, :beam_lib.label}
 
   @spec broadcast(module, worker_descriptor, Block.t) :: :ok
 
@@ -20,7 +20,7 @@ defmodule Type.Inference.Application.Depends do
   @spec dispatch(client_descriptor, Block.t) :: :ok
   defp dispatch(key, block) do
     Registry.dispatch(@pubsub, key, fn entries ->
-      for {pid, _} <- entries, do: send(pid, {:block, block})
+      for {pid, _} <- entries, do: send(pid, {:block, key, block})
     end)
   end
 
@@ -28,7 +28,7 @@ defmodule Type.Inference.Application.Depends do
   def on(client_descriptor) do
     Registry.register(@pubsub, client_descriptor, [])
     receive do
-      {:block, block} -> block
+      {:block, ^client_descriptor, block} -> block
     end
   end
 

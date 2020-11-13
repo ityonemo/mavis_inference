@@ -1,8 +1,10 @@
 defmodule Type.Inference do
-  
+
   import Type
 
   @behaviour Type.Inference.Api
+
+  @type opcode :: atom | tuple
 
   @impl true
   @spec infer(module, atom, arity) :: {:ok, Type.t} | {:error, any}
