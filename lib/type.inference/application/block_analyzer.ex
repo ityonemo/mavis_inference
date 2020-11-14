@@ -1,8 +1,8 @@
 defmodule Type.Inference.Application.BlockAnalyzer.Api do
   @callback run({module,
                  {atom, arity} | nil,
-                 :beam_asm.label,
-                 [Type.Inference.opcode]}) :: :ok
+                 :beam_asm.label},
+                 [Type.Inference.opcode]) :: :ok
 end
 
 defmodule Type.Inference.Application.BlockAnalyzer do

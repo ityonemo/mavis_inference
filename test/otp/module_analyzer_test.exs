@@ -40,7 +40,7 @@ defmodule TypeTest.Inference.OTP.ModuleAnalyzerTest do
     end
 
     test "produces an entry point for an exported function", ctx do
-      Mox.stub(Stub, :run, fn {mod, fa, label, _code} ->
+      Mox.stub(Stub, :run, fn {mod, fa, label}, _code ->
         if fa, do: send(self(), {:mfa, fa})
         send(self(), {:label, {mod, label}})
         # unblock the function
@@ -60,7 +60,7 @@ defmodule TypeTest.Inference.OTP.ModuleAnalyzerTest do
     end
 
     test "produces an entry point for the private function", ctx do
-      Mox.stub(Stub, :run, fn {mod, fa, label, _code} ->
+      Mox.stub(Stub, :run, fn {mod, fa, label}, _code ->
         if fa, do: send(self(), {:mfa, fa})
         send(self(), {:label, {mod, label}})
         # unblock the function
@@ -80,7 +80,7 @@ defmodule TypeTest.Inference.OTP.ModuleAnalyzerTest do
     end
 
     test "produces an entry point for the lambda", ctx do
-      Mox.stub(Stub, :run, fn {mod, fa, label, _code} ->
+      Mox.stub(Stub, :run, fn {mod, fa, label}, _code ->
         if fa, do: send(self(), {:mfa, fa})
         send(self(), {:label, {mod, label}})
         # unblock the function

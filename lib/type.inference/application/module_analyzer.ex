@@ -14,9 +14,9 @@ defmodule Type.Inference.Application.ModuleAnalyzer do
   # sane state to perform inference.
   defp task(module) do
     # Register ourselves with the module registry.
-    with {:ok,  } <- Registry.register(Type.Inference.ModuleTracker, module, []),
-         {:module, _} <- Code.ensure_loaded(module),
-         {^module, binary, _filepath} <- :code.get_object_code(module) do
+    with {:ok, _} <- Registry.register(Type.Inference.ModuleTracker, module, []) |> IO.inspect(label: "17"),
+         {:module, _} <- Code.ensure_loaded(module) |> IO.inspect(label: "18"),
+         {^module, binary, _filepath} <- :code.get_object_code(module) |> IO.inspect(label: "19") do
 
       infer(binary, module)
     else
@@ -52,7 +52,7 @@ defmodule Type.Inference.Application.ModuleAnalyzer do
         raw_opcodes
         |> Enum.flat_map(&opcodes_to_label_blocks(&1, nil, [], []))
         |> Enum.map(fn {label, code} ->
-          block_analyzer.run({module, entry_points[label], label, code})
+          block_analyzer.run({module, entry_points[label], label}, code)
           label
         end)
         |> Enum.each(&BlockCache.depend_on({module, &1}))

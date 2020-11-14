@@ -2,8 +2,7 @@ defmodule TypeTest.Abstract.ShortformTest do
   use ExUnit.Case, async: true
   import ExUnit.CaptureIO
 
-  use Type.Inference.Opcodes, debug_dump_code: true
-
+  use Type.Inference.Opcodes
   @moduletag :abstract
 
   alias Type.Inference.Block.Parser
