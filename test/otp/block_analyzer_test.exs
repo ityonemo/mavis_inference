@@ -1,7 +1,7 @@
 defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
   use ExUnit.Case, async: true
 
-  @moduletag :type_block
+  @moduletag :otp
 
   import Type, only: :macros
   import Mox

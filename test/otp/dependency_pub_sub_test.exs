@@ -1,7 +1,9 @@
 defmodule TypeTest.Inference.OTP.DependencyPubSubTest do
-  # tests that the OTP pubsub parts work.
+  # tests that the OTP pubsub parts work
 
   use ExUnit.Case, async: true
+
+  @moduletag :otp
 
   alias Type.Inference.Application.BlockCache
 

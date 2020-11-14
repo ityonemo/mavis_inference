@@ -1,7 +1,7 @@
 defmodule TypeTest.Inference.OTP.ModuleAnalyzerTest do
   use ExUnit.Case, async: true
 
-  @moduletag :type_module
+  @moduletag :otp
 
   alias Type.Function
   alias Type.Inference.Application.ModuleAnalyzer
