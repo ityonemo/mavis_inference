@@ -3,6 +3,8 @@ defmodule Type.Inference.Application.BlockCache do
 
   use GenServer
 
+  alias Type.Inference.Application.ModuleAnalyzer
+
   import Logger
 
   @pubsub Type.Inference.Dependency.PubSub
@@ -13,6 +15,7 @@ defmodule Type.Inference.Application.BlockCache do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
+  @impl true
   def init(_) do
     {:ok, :ets.new(__MODULE__, [:set])}
   end
@@ -22,28 +25,47 @@ defmodule Type.Inference.Application.BlockCache do
 
   ## depend_on
 
-  @spec depend_on(Block.dep) :: Block.t
-  def depend_on(dep) do
+  @spec depend_on(Block.dep, keyword) :: Block.t
+  def depend_on(dep, opts \\ []) do
     # Pull the process's self-identity from the Process dictionary.
     self_id = Process.get(:block_id)
+    # debug options
+    strict = Keyword.get(opts, :strict, true)
+    module_analyzer = Keyword.get(opts, :module_analyzer, ModuleAnalyzer)
+
     Registry.register(@pubsub, dep, ml(self_id))
-    if block = GenServer.call(__MODULE__, {:depend_on, dep, self_id}) do
-      block
-    else
-      wait_for(dep)
+
+    case GenServer.call(__MODULE__, {:depend_on, dep, self_id}) do
+      {:ok, block} -> block
+      :missing when strict ->
+        raise Type.InferenceError, message: dep_to_msg(dep)
+      :no_module when strict ->
+        dep
+        |> elem(0)
+        |> module_analyzer.run
+
+        wait_for(dep)
+      _ ->
+        wait_for(dep)
     end
   after
     Registry.unregister(@pubsub, dep)
   end
+
+  defp dep_to_msg({m, f, a}), do: "the module #{inspect m} does not have function #{f}/#{a}"
+  defp dep_to_msg({m, l}), do: "the module #{inspect m} does not have label #{l}"
 
   defp depend_on_impl(dep, self_id, _from, table) do
     # before registering the dependency, attempt to resolve circular
     # dependencies; those will be collapsed.
     search_for_circular_dep(dep, self_id)
 
-    case :ets.match(table, {dep, :"$1"}) do
-      [[block]] -> {:reply, block, table}
-      [] -> {:reply, nil, table}
+    with {:a, [[:cached]]} <- {:a, :ets.match(table, {elem(dep, 0), :"$1"})},
+         {:b, [[block]]}   <- {:b, :ets.match(table, {dep, :"$1"})} do
+      {:reply, {:ok, block}, table}
+    else
+      {:a, []} -> {:reply, :no_module, table}
+      {:b, []} -> {:reply, :missing, table}
     end
 
   catch
@@ -51,7 +73,7 @@ defmodule Type.Inference.Application.BlockCache do
       # a provisional response that will deal with resolving circular
       # references, later.
       Logger.debug("circular reference between #{inspect self_id} and #{inspect circ} found.")
-      {:reply, %Type{name: :none}, table}
+      {:reply, {:ok, %Type{name: :none}}, table}
   end
 
   defp wait_for(dep) do
@@ -75,14 +97,16 @@ defmodule Type.Inference.Application.BlockCache do
     end)
   end
 
-
   ## resolve
 
   @spec resolve(Block.id, Block.t) :: :ok
   def resolve(block_id, block) do
     GenServer.call(__MODULE__, {:resolve, block_id, block})
   end
-  defp resolve_impl(block_id = {_, nil, _}, block, _from, table) do
+  defp resolve_impl(block_id = {mod, nil, _}, block, _from, table) do
+    # make sure that we leave evidence that the module should be cached
+    add_module(table, mod)
+    # leave {{mod, label}, block} in the ETS table.
     :ets.insert(table, {ml(block_id), block})
     broadcast(block_id, block)
     {:reply, :ok, table}
@@ -91,6 +115,10 @@ defmodule Type.Inference.Application.BlockCache do
     :ets.insert(table, {mfa(block_id), block})
     broadcast(block_id, block)
     resolve_impl(remove_fa(block_id), block, from, table)
+  end
+
+  defp add_module(table, module) do
+    :ets.insert(table, {module, :cached})
   end
 
   @spec broadcast(Block.id, Block.t) :: :ok
@@ -109,6 +137,15 @@ defmodule Type.Inference.Application.BlockCache do
     end)
   end
 
+  if Mix.env in [:dev, :test] do
+  ## debug
+  def debug_add_module(module), do: GenServer.call(__MODULE__, {:debug_add_module, module})
+  defp debug_add_module_impl(module, _from, table) do
+    add_module(table, module)
+    {:reply, :ok, table}
+  end
+  end
+
   defp mfa({module, {function, arity}, _label}), do: {module, function, arity}
   defp mfa({_, nil, _}), do: nil
   defp mfa(nil), do: nil
@@ -125,6 +162,11 @@ defmodule Type.Inference.Application.BlockCache do
   end
   def handle_call({:resolve, block_id, block}, from, table) do
     resolve_impl(block_id, block, from, table)
+  end
+  if Mix.env in [:dev, :test] do
+  def handle_call({:debug_add_module, module}, from, table) do
+    debug_add_module_impl(module, from, table)
+  end
   end
 
 end

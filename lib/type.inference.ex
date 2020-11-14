@@ -24,3 +24,7 @@ defmodule Type.Inference do
     end
   end
 end
+
+defmodule Type.InferenceError do
+  defexception [:message]
+end

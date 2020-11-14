@@ -15,7 +15,6 @@ defmodule TypeTest.CommonModuleTest do
   describe "basic modules" do
     test "have __info__/1 function" do
       BlockCache.depend_on({@module, :__info__, 1})
-      |> IO.inspect(label: "19")
     end
 
     test "have module_info/0 function" do

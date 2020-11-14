@@ -14,9 +14,9 @@ defmodule Type.Inference.Application.ModuleAnalyzer do
   # sane state to perform inference.
   defp task(module) do
     # Register ourselves with the module registry.
-    with {:ok, _} <- Registry.register(Type.Inference.ModuleTracker, module, []) |> IO.inspect(label: "17"),
-         {:module, _} <- Code.ensure_loaded(module) |> IO.inspect(label: "18"),
-         {^module, binary, _filepath} <- :code.get_object_code(module) |> IO.inspect(label: "19") do
+    with {:ok, _} <- Registry.register(Type.Inference.ModuleTracker, module, []),
+         {:module, _} <- Code.ensure_loaded(module),
+         {^module, binary, _filepath} <- :code.get_object_code(module) do
 
       infer(binary, module)
     else
@@ -25,10 +25,10 @@ defmodule Type.Inference.Application.ModuleAnalyzer do
         :ok
       {:error, _} ->
         # when coming from
-        raise "error loading module #{inspect module}"
+        raise Type.InferenceError, message: "error loading module #{inspect module}"
       :error ->
         # happens when the module is in-memory
-        raise "cannot run inference on an in-memory module"
+        raise Type.InferenceError, message: "cannot run inference on the in-memory module #{inspect module}"
     end
   end
 

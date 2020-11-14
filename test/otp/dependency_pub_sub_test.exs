@@ -14,7 +14,7 @@ defmodule TypeTest.Inference.OTP.DependencyPubSubTest do
   describe "pubsub allows you to register" do
     test "a dependency by MFA" do
       future = Task.async(fn ->
-        BlockCache.depend_on({MyModule, :my_func, 0})
+        BlockCache.depend_on({MyModule, :my_func, 0}, strict: false)
       end)
 
       Process.sleep(100)
@@ -26,7 +26,7 @@ defmodule TypeTest.Inference.OTP.DependencyPubSubTest do
 
     test "a dependency by module/block number" do
       future = Task.async(fn ->
-        BlockCache.depend_on({MyModule, 15})
+        BlockCache.depend_on({MyModule, 15}, strict: false)
       end)
 
       Process.sleep(100)
