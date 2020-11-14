@@ -3,7 +3,7 @@ defmodule TypeTest.Inference.OTP.DependencyPubSubTest do
 
   use ExUnit.Case, async: true
 
-  alias Type.Inference.Application.Depends
+  alias Type.Inference.Application.BlockCache
 
   @test_block %Type.Inference.Block{
     needs: %{}, makes: %Type{name: :any}
@@ -12,24 +12,24 @@ defmodule TypeTest.Inference.OTP.DependencyPubSubTest do
   describe "pubsub allows you to register" do
     test "a dependency by MFA" do
       future = Task.async(fn ->
-        Depends.on({MyModule, :my_func, 0})
+        BlockCache.depend_on({MyModule, :my_func, 0})
       end)
 
       Process.sleep(100)
 
-      Depends.broadcast(MyModule, {{:my_func, 0}, 15}, @test_block)
+      BlockCache.broadcast({MyModule, {:my_func, 0}, 15}, @test_block)
 
       assert @test_block = Task.await(future)
     end
 
     test "a dependency by module/block number" do
       future = Task.async(fn ->
-        Depends.on({MyModule, 15})
+        BlockCache.depend_on({MyModule, 15})
       end)
 
       Process.sleep(100)
 
-      Depends.broadcast(MyModule, {{:my_func, 0}, 15}, @test_block)
+      BlockCache.broadcast({MyModule, {:my_func, 0}, 15}, @test_block)
 
       assert @test_block = Task.await(future)
     end

@@ -1,7 +1,7 @@
 defmodule Type.Inference.Application.ModuleAnalyzer do
 
   alias Type.Inference.Application.BlockAnalyzer
-  alias Type.Inference.Application.Depends
+  alias Type.Inference.Application.BlockCache
 
   def run(module) do
     Task.Supervisor.start_child(Type.Inference.TaskSupervisor, fn ->
@@ -55,7 +55,7 @@ defmodule Type.Inference.Application.ModuleAnalyzer do
           block_analyzer.run({module, entry_points[label], label, code})
           label
         end)
-        |> Enum.each(&Depends.on({module, &1}))
+        |> Enum.each(&BlockCache.depend_on({module, &1}))
 
       _ ->
         raise "unable to disassemble module #{module}"
