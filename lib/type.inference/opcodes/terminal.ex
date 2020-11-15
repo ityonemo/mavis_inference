@@ -11,7 +11,7 @@ defmodule Type.Inference.Opcodes.Terminal do
       select_table = list
       |> Enum.chunk_every(2)
       |> Enum.map(fn [param, jump] ->
-        {evaluate_param(param), evaluate_jump(jump)}
+        {fetch_type(regs, param), evaluate_jump(jump)}
       end)
       |> Enum.into(%{})
 
@@ -35,10 +35,6 @@ defmodule Type.Inference.Opcodes.Terminal do
     backprop :terminal
   end
 
-  # TODO: this is going to be more general over time.
-  # Move this into a tools function that can be used my
-  # multiple opcode modules.
-  defp evaluate_param({:atom, atom}), do: atom
   defp evaluate_jump({:f, int}), do: int
 
   opcode :return do

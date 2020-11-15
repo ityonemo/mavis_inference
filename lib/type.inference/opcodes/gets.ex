@@ -9,7 +9,7 @@ defmodule Type.Inference.Opcodes.Gets do
         %Type.Tuple{elements: els} when length(els) > index ->
           {:ok, put_reg(regs, to, Enum.at(els, index))}
         _ ->
-          raise "get_tuple element #{inspect from} #{inspect index} #{inspect to} failed for #{regs}"
+          raise "get_tuple element #{inspect from} #{inspect index} #{inspect to} failed for #{inspect regs}"
       end
     end
 
@@ -47,5 +47,7 @@ defmodule Type.Inference.Opcodes.Gets do
 
     backprop :terminal
   end
+
+  opcode {:get_hd, from, to}, :unimplemented
 
 end

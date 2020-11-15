@@ -3,6 +3,7 @@ defmodule Type.Inference.Opcodes.Calls do
   use Type.Inference.Opcodes
 
   alias Type.Inference.Module.ParallelParser
+  alias Type.Inference.Application.BlockCache
 
   # MOVE SEMANTICS
   @operands [:module, :exports, :attributes, :compile, :native, :md5]
@@ -13,7 +14,7 @@ defmodule Type.Inference.Opcodes.Calls do
         ParallelParser.obtain_call(fun, arity)
         |> IO.inspect(label: "15")
       else
-        Type.Inference.BlockCache.request({mod, fun, arity})
+        BlockCache.depend_on({mod, fun, arity})
         |> IO.inspect(label: "18")
       end
     end
@@ -27,7 +28,7 @@ defmodule Type.Inference.Opcodes.Calls do
         ParallelParser.obtain_call(fun, arity)
         |> IO.inspect(label: "28")
       else
-        Type.Inference.BlockCache.request({mod, fun, arity})
+        BlockCache.depend_on({mod, fun, arity})
         |> IO.inspect(label: "32")
       end
     end
@@ -41,7 +42,7 @@ defmodule Type.Inference.Opcodes.Calls do
         ParallelParser.obtain_call(fun, arity)
         |> IO.inspect(label: "43")
       else
-        Type.Inference.BlockCache.request({mod, fun, arity})
+        BlockCache.depend_on({mod, fun, arity})
         |> IO.inspect(label: "46")
       end
     end
@@ -55,7 +56,7 @@ defmodule Type.Inference.Opcodes.Calls do
         ParallelParser.obtain_call(fun, arity)
         |> IO.inspect(label: "57")
       else
-        Type.Inference.BlockCache.request({mod, fun, arity})
+        BlockCache.depend_on({mod, fun, arity})
         |> IO.inspect(label: "60")
       end
     end
@@ -88,7 +89,7 @@ defmodule Type.Inference.Opcodes.Calls do
         ParallelParser.obtain_call(fun, arity)
         |> IO.inspect(label: "57")
       else
-        Type.Inference.BlockCache.request({mod, fun, arity})
+        BlockCache.depend_on({mod, fun, arity})
         |> IO.inspect(label: "60")
       end
     end

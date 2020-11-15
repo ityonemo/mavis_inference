@@ -14,7 +14,8 @@ defmodule MavisInference.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+      mod: {Type.Inference.Application, []}
     ]
   end
 
@@ -23,7 +24,8 @@ defmodule MavisInference.MixProject do
 
   defp deps do
     [
-      {:mavis, path: "../mavis"} #"~> 0.0.3"}
+      {:mavis, "~> 0.0.5"},
+      {:mox, "~> 1.0"}
     ]
   end
 end

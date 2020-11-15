@@ -1,8 +1,10 @@
 defmodule Type.Inference do
-  
+
   import Type
 
   @behaviour Type.Inference.Api
+
+  @type opcode :: atom | tuple
 
   @impl true
   @spec infer(module, atom, arity) :: {:ok, Type.t} | {:error, any}
@@ -21,4 +23,8 @@ defmodule Type.Inference do
       error = {:error, _} -> error
     end
   end
+end
+
+defmodule Type.InferenceError do
+  defexception [:message]
 end
