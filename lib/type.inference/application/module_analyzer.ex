@@ -14,7 +14,7 @@ defmodule Type.Inference.Application.ModuleAnalyzer do
   # sane state to perform inference.
   defp task(module) do
     # Register ourselves with the module registry.
-    with {:ok, _} <- Registry.register(Type.Inference.ModuleTracker, module, []),
+    with {:ok, _} <- register(module),
          {:module, _} <- Code.ensure_loaded(module),
          {^module, binary, _filepath} <- :code.get_object_code(module) do
 
@@ -31,6 +31,21 @@ defmodule Type.Inference.Application.ModuleAnalyzer do
         raise Type.InferenceError, message: "cannot run inference on the in-memory module #{inspect module}"
     end
   end
+
+  @spec register(module) :: {:error, {:already_registered, pid}} | {:ok, pid}
+  def register(module), do: Registry.register(Type.Inference.ModuleTracker, module, [])
+
+  @spec lookup(module) :: pid | nil
+  def lookup(module) do
+    Type.Inference.ModuleTracker
+    |> Registry.lookup(module)
+    |> List.first
+    |> case  do
+      nil -> nil
+      {pid, _} -> pid
+    end
+  end
+
 
   import Record
   defrecord :beam_file, Record.extract(:beam_file, from_lib: "compiler/src/beam_disasm.hrl")

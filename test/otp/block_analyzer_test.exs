@@ -61,10 +61,8 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
 
   describe "the analyzer can detect circular dependencies" do
     test "when there are two blocks that are dependent on each other" do
-      test_pid = self()
       Stub
       |> expect(:parse, fn [:return] ->
-        send(test_pid, :unblock)
         BlockCache.depend_on({__MODULE__, 14}, strict: false)
         @default_block
       end)
@@ -74,6 +72,7 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
       end)
 
       BlockAnalyzer.run({__MODULE__, nil, 13}, [:return], Stub)
+
       Process.sleep(100)
       BlockAnalyzer.run({__MODULE__, nil, 14}, [:return], Stub)
 
@@ -81,10 +80,8 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
     end
 
     test "when there are three blocks that are codependent" do
-      test_pid = self()
       Stub
       |> expect(:parse, fn [:return] ->
-        send(test_pid, :unblock)
         BlockCache.depend_on({__MODULE__, 16}, strict: false)
         @default_block
       end)
@@ -101,7 +98,7 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
       Process.sleep(100)
       BlockAnalyzer.run({__MODULE__, nil, 16}, [:return], Stub)
       Process.sleep(100)
-      BlockAnalyzer.run({__MODULE__, nil, 16}, [:return], Stub)
+      BlockAnalyzer.run({__MODULE__, nil, 17}, [:return], Stub)
 
       assert @default_block == BlockCache.depend_on({__MODULE__, 15}, strict: false)
     end
@@ -112,8 +109,8 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
     defmodule RaiseTest do end
 
     test "will raise if a term with the module exists" do
-      # create a tag indicating that the module has been added
-      BlockCache.debug_add_module(RaiseTest)
+      # create a tag indicating that the module has been finished
+      BlockCache.finish(RaiseTest)
 
       msg = "the module #{inspect RaiseTest} does not have function foo/1"
       assert_raise Type.InferenceError, msg, fn ->
@@ -125,6 +122,7 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
       @default_block default_block
       def run(module) do
         send(self(), {:block, {__MODULE__, :run, 1}, @default_block})
+        {:ok, self()}
       end
     end
 

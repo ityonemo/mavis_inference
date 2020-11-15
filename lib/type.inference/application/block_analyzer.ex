@@ -24,7 +24,6 @@ defmodule Type.Inference.Application.BlockAnalyzer do
   end
 
   defp infer(block_id, code, parser_module) do
-
     # broadcast completion of the block when we are done analyzing it.
     block = parser_module.parse(code)
 

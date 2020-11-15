@@ -1,6 +1,11 @@
 defmodule Type.Inference.Application.BlockCache do
   @moduledoc false
 
+  ## this GenServer encapsulates an ETS table and sequences
+  ## reads and writes out of it.
+  ## The ETS table holds the following types of values:
+  ## - {module, state} where state in :started, :finished
+
   use GenServer
 
   alias Type.Inference.Application.ModuleAnalyzer
@@ -8,8 +13,6 @@ defmodule Type.Inference.Application.BlockCache do
   import Logger
 
   @pubsub Type.Inference.Dependency.PubSub
-
-  # second type of K/V is mfa -> block
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
@@ -45,6 +48,8 @@ defmodule Type.Inference.Application.BlockCache do
         |> module_analyzer.run
 
         wait_for(dep)
+      :wait ->
+        wait_for(dep)
       _ ->
         wait_for(dep)
     end
@@ -52,20 +57,19 @@ defmodule Type.Inference.Application.BlockCache do
     Registry.unregister(@pubsub, dep)
   end
 
-  defp dep_to_msg({m, f, a}), do: "the module #{inspect m} does not have function #{f}/#{a}"
-  defp dep_to_msg({m, l}), do: "the module #{inspect m} does not have label #{l}"
-
   defp depend_on_impl(dep, self_id, _from, table) do
     # before registering the dependency, attempt to resolve circular
     # dependencies; those will be collapsed.
     search_for_circular_dep(dep, self_id)
 
-    with {:a, [[:cached]]} <- {:a, :ets.match(table, {elem(dep, 0), :"$1"})},
-         {:b, [[block]]}   <- {:b, :ets.match(table, {dep, :"$1"})} do
-      {:reply, {:ok, block}, table}
+    # warning: inverted with block.
+    with []            <- :ets.match(table, {dep, :"$1"}),
+         [[:finished]] <- :ets.match(table, {elem(dep, 0), :"$1"}) do
+      {:reply, :missing, table}
     else
-      {:a, []} -> {:reply, :no_module, table}
-      {:b, []} -> {:reply, :missing, table}
+      [[:started]] -> {:reply, :wait, table}
+      []           -> {:reply, :no_module, table}
+      [[block]]    -> {:reply, {:ok, block}, table}
     end
 
   catch
@@ -76,9 +80,21 @@ defmodule Type.Inference.Application.BlockCache do
       {:reply, {:ok, %Type{name: :none}}, table}
   end
 
+  defp dep_to_msg({m, f, a}), do: "the module #{inspect m} does not have function #{f}/#{a}"
+  defp dep_to_msg({m, l}), do: "the module #{inspect m} does not have label #{l}"
+
   defp wait_for(dep) do
+    pid = dep
+    |> elem(0)
+    |> ModuleAnalyzer.lookup()
+
+    ref = if pid, do: Process.monitor(pid)
+
     receive do
       {:block, ^dep, block} -> block
+      {:DOWN, ^ref, :process, ^pid, reason} ->
+        raise Type.InferenceError,
+          message: "waiting for module #{dep |> elem(0) |> inspect} analysis to finish, crashed due to #{reason}"
     end
   end
 
@@ -88,11 +104,11 @@ defmodule Type.Inference.Application.BlockCache do
     ml_self = ml(self_id)
     # first, find the target for dep.
     Registry.select(@pubsub, [{{:"$1", :_, :"$2"}, [], [{{:"$1", :"$2"}}]}])
-    |> Enum.filter(&(dep == elem(&1, 0)))
+    |> Enum.filter(&(dep == elem(&1, 1)))
     |> Enum.each(fn
       {^mfa_self, circ} -> throw {:circular, circ}
       {^ml_self, circ} -> throw {:circular, circ}
-      {_, next_hop} ->
+      {next_hop, _} ->
         search_for_circular_dep(next_hop, self_id)
     end)
   end
@@ -103,22 +119,17 @@ defmodule Type.Inference.Application.BlockCache do
   def resolve(block_id, block) do
     GenServer.call(__MODULE__, {:resolve, block_id, block})
   end
-  defp resolve_impl(block_id = {mod, nil, _}, block, _from, table) do
-    # make sure that we leave evidence that the module should be cached
-    add_module(table, mod)
+  defp resolve_impl(block_id = {_, nil, _}, block, _from, table) do
     # leave {{mod, label}, block} in the ETS table.
     :ets.insert(table, {ml(block_id), block})
     broadcast(block_id, block)
     {:reply, :ok, table}
   end
   defp resolve_impl(block_id, block, from, table) do
+    # leave {mfa, block} in the ETS table.
     :ets.insert(table, {mfa(block_id), block})
     broadcast(block_id, block)
     resolve_impl(remove_fa(block_id), block, from, table)
-  end
-
-  defp add_module(table, module) do
-    :ets.insert(table, {module, :cached})
   end
 
   @spec broadcast(Block.id, Block.t) :: :ok
@@ -137,13 +148,25 @@ defmodule Type.Inference.Application.BlockCache do
     end)
   end
 
-  if Mix.env in [:dev, :test] do
-  ## debug
-  def debug_add_module(module), do: GenServer.call(__MODULE__, {:debug_add_module, module})
-  defp debug_add_module_impl(module, _from, table) do
-    add_module(table, module)
+  ## start
+  # informs the cache that work on the module has begun.
+  # should be balanced by the `finish(module)` function.
+  def start(module), do: GenServer.call(__MODULE__, {:start, module})
+  def start_impl(module, {who, _}, table) do
+    :ets.insert(table, {module, {:started, who}})
     {:reply, :ok, table}
   end
+
+  ## finish
+
+  # This function should be called by ModuleAnalyzer to report to the
+  # ETS state machine that work on all of the functions in this module
+  # has been completed.  Flips the state of the module entry in the
+  # table to :finished
+  def finish(module), do: GenServer.call(__MODULE__, {:finish, module})
+  defp finish_impl(module, _from, table) do
+    :ets.insert(table, {module, :finished})
+    {:reply, :ok, table}
   end
 
   defp mfa({module, {function, arity}, _label}), do: {module, function, arity}
@@ -163,10 +186,11 @@ defmodule Type.Inference.Application.BlockCache do
   def handle_call({:resolve, block_id, block}, from, table) do
     resolve_impl(block_id, block, from, table)
   end
-  if Mix.env in [:dev, :test] do
-  def handle_call({:debug_add_module, module}, from, table) do
-    debug_add_module_impl(module, from, table)
+  def handle_call({:start, module}, from, table) do
+    start_impl(module, from, table)
   end
+  def handle_call({:finish, module}, from, table) do
+    finish_impl(module, from, table)
   end
 
 end
