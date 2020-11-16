@@ -1,5 +1,5 @@
 defmodule Type.Inference.Opcodes.Tests do
-  use Type.Inference.Opcodes
+  use Type.Inference.Opcodes, debug_dump_code: true
 
   alias Type.Inference.Application.BlockCache
 
@@ -111,7 +111,7 @@ defmodule Type.Inference.Opcodes.Tests do
     forward(regs, meta, ...) do
       # get the required values from te fail condition.
       jump_block = BlockCache.depend_on({meta.module, fail})
-      
+
       cond do
         not is_defined(regs, from) ->
           jump_needs = Enum.map(jump_block, &merge_reg(regs, &1.needs))

@@ -7,7 +7,6 @@ defmodule TypeTest.PrimerExamples do
   end
   def sum_tail([], acc), do: acc
 
-
   def sum_body([head | tail]) do
     head + sum_body(tail)
   end
