@@ -48,10 +48,10 @@ defmodule Type.Inference.Opcodes.Calls do
     backprop :terminal
   end
 
-  opcode {:call_only, _arity1, {_this_module, function, arity}} do
+  opcode {:call_only, _arity1, {mod, fun, arity}} do
     forward(state, _meta, ...) do
       # TODO: allow this to take alternate specs
-      [lookup] = BlockCache.depend_on(function, arity)
+      [lookup] = BlockCache.depend_on({mod, fun, arity})
 
       # make sure that all of the "needs" are taken care of.
       lookup.needs

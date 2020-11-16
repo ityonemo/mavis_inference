@@ -50,7 +50,7 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
 
   describe "when the analyzer is passed a label" do
     test "the result is retrievable from the block cache by label" do
-      expect(Stub, :parse, fn [:return] -> @default_block end)
+      expect(Stub, :parse, fn [:return], _ -> @default_block end)
 
       BlockAnalyzer.run({__MODULE__, nil, 12}, [:return], Stub)
 
@@ -120,7 +120,7 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
 
     defmodule AnalysisTest do
       @default_block default_block
-      def run(module) do
+      def run(_module) do
         send(self(), {:block, {__MODULE__, :run, 1}, @default_block})
         {:ok, self()}
       end

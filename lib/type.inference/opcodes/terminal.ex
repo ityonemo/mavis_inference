@@ -15,6 +15,8 @@ defmodule Type.Inference.Opcodes.Terminal do
       end)
       |> Enum.into(%{})
 
+      if meta.module == nil, do: raise "#{inspect meta} #{inspect regs}"
+
       if is_defined(regs, from) do
         jump_reg = fetch_type(regs, from)
 
@@ -60,6 +62,9 @@ defmodule Type.Inference.Opcodes.Terminal do
 
   opcode {:jump, {:f, dest}} do
     forward(regs, meta, ...) do
+
+      if meta.module == nil, do: raise "fooquux"
+
       [jump_blk] = BlockCache.depend_on({meta.module, dest})
 
       if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(regs, {:x, &1}))) do
@@ -74,6 +79,9 @@ defmodule Type.Inference.Opcodes.Terminal do
 
   opcode {:wait, {:f, dest}} do
     forward(regs, meta, ...) do
+
+      if meta.module == nil, do: raise "mlxprx"
+
       [jump_blk] = BlockCache.depend_on({meta.module, dest})
 
       if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(regs, {:x, &1}))) do

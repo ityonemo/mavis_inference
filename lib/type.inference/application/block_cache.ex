@@ -31,7 +31,7 @@ defmodule Type.Inference.Application.BlockCache do
   @spec depend_on(Block.dep, keyword) :: Block.t
   def depend_on(dep, opts \\ [])
   def depend_on(dep, _opts) when elem(dep, 0) == nil do
-    raise Type.InferenceError, message: "attempting to depend on `nil` module"
+    raise Type.InferenceError, message: "attempting to depend on `nil` module in #{inspect dep}"
   end
   def depend_on(dep, opts) when is_tuple(dep) do
     # Pull the process's self-identity from the Process dictionary.

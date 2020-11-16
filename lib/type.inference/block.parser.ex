@@ -1,6 +1,6 @@
 
 defmodule Type.Inference.Block.Parser.Api do
-  @callback parse([Module.opcode]) :: Block.t
+  @callback parse([Module.opcode], keyword) :: Block.t
 end
 
 defmodule Type.Inference.Block.Parser do

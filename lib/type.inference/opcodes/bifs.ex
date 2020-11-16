@@ -83,10 +83,10 @@ defmodule Type.Inference.Opcodes.Bifs do
     end
 
     forward(regs, _meta, ...) when not is_defined(regs, index) do
-      case tuple.elements do
+      case fetch_type(regs, tuple).elements do
         lst when is_list(lst) ->
           {:backprop, [put_reg(regs, index, 0..(length(lst) - 1))]}
-        :any ->
+        {:min, 0} ->
           {:backprop, [put_reg(regs, index, builtin(:non_neg_integer))]}
         # also add {:min, number}
       end
