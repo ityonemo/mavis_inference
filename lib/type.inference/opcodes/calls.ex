@@ -5,8 +5,6 @@ defmodule Type.Inference.Opcodes.Calls do
   alias Type.Inference.Application.BlockCache
 
   # MOVE SEMANTICS
-  @operands [:module, :exports, :attributes, :compile, :native, :md5]
-
   opcode {:call_ext, _arity1, {:extfunc, mod, fun, arity}} do
     forward(_state, _meta, ...) do
       BlockCache.depend_on({mod, fun, arity})
@@ -15,7 +13,7 @@ defmodule Type.Inference.Opcodes.Calls do
     backprop :terminal
   end
 
-  # disables _module_info.
+  # disables _module_info and __info__.  Temporary only.
   opcode {:call_ext_only, _, {:extfunc, :erlang, :get_module_info, _}} do
     forward(state, _meta, ...) do
       {:ok, state}

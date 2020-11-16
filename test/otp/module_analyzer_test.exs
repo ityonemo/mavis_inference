@@ -3,7 +3,6 @@ defmodule TypeTest.Inference.OTP.ModuleAnalyzerTest do
 
   @moduletag :otp
 
-  alias Type.Function
   alias Type.Inference.Application.ModuleAnalyzer
   alias __MODULE__.BlockInference.Stub
 
@@ -21,8 +20,6 @@ defmodule TypeTest.Inference.OTP.ModuleAnalyzerTest do
     Mox.defmock(Stub, for: Type.Inference.Application.BlockAnalyzer.Api)
     :ok
   end
-
-  @any builtin(:any)
 
   @spec sweep :: %{label: [{module, :beam_asm.label}], mfa: [mfa]}
   defp sweep(map \\ %{label: [], mfa: []}) do

@@ -10,7 +10,7 @@ defmodule Type.Inference.Application.BlockCache do
 
   alias Type.Inference.Application.ModuleAnalyzer
 
-  import Logger
+  require Logger
 
   @pubsub Type.Inference.Dependency.PubSub
 

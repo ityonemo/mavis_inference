@@ -13,7 +13,7 @@ defmodule Type.Inference do
   @spec infer(module, atom, arity) :: {:ok, functions} | {:error, any}
   def infer(module, fun, arity) do
     with {:module, _} <- Code.ensure_loaded(module),
-         {^module, binary, _filepath} <- :code.get_object_code(module) do
+         {^module, _binary, _filepath} <- :code.get_object_code(module) do
 
       function = {module, fun, arity}
       |> BlockCache.depend_on

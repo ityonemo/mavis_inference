@@ -46,7 +46,6 @@ defmodule Type.Inference.Application.ModuleAnalyzer do
     end
   end
 
-
   import Record
   defrecord :beam_file, Record.extract(:beam_file, from_lib: "compiler/src/beam_disasm.hrl")
 

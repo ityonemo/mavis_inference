@@ -217,7 +217,7 @@ defmodule Type.Inference.Opcodes.GcBifs do
     forward(regs, _meta, ...) do
       ltype = fetch_type(regs, left)
       rtype = fetch_type(regs, right)
-      {:ok, res} = Type.Function.apply_types(@mul_fn, [ltype, rtype])
+      {:ok, res} = Type.Function.apply_types(@div_fn, [ltype, rtype])
       {:ok, put_reg(regs, to, res)}
     end
 
