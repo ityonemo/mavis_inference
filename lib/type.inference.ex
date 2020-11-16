@@ -1,13 +1,13 @@
 defmodule Type.Inference do
 
-  import Type
-
   @behaviour Type.Inference.Api
 
   @type opcode :: atom | tuple
 
+  @type functions :: Type.Function.t | Type.Union.t(Type.Function.t)
+
   @impl true
-  @spec infer(module, atom, arity) :: {:ok, Type.t} | {:error, any}
+  @spec infer(module, atom, arity) :: {:ok, functions} | {:error, any}
   def infer(module, fun, arity) do
     fa = {fun, arity}
     with {:module, _} <- Code.ensure_loaded(module),
