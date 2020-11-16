@@ -7,7 +7,6 @@ defmodule TypeTest.Opcode.JumpTest do
 
   import Type
 
-  alias Type.Inference.Module.ParallelParser
   alias Type.Inference.Block.Parser
   alias Type.Inference.{Registers, Block}
 
@@ -15,10 +14,10 @@ defmodule TypeTest.Opcode.JumpTest do
     @op_jump [{:jump, {:f, 10}}]
 
     setup do
-      ParallelParser.send_lookup(self(), 10, :fun, 0, [%Block{
-        needs: %{0 => builtin(:integer), 1 => builtin(:integer)},
-        makes: builtin(:float)
-      }])
+      #ParallelParser.send_lookup(self(), 10, :fun, 0, [%Block{
+      #  needs: %{0 => builtin(:integer), 1 => builtin(:integer)},
+      #  makes: builtin(:float)
+      #}])
     end
 
     test "forward propagates jump target type" do

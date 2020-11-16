@@ -1,8 +1,6 @@
 defmodule Type.Inference.Opcodes.Terminal do
   use Type.Inference.Opcodes
 
-  alias Type.Inference.Module.ParallelParser
-
   opcode {:select_val, from, {:f, _fail}, {:list, list}} do
     forward(regs, _meta, ...) do
       # TODO: fix this so that it merges instead of
@@ -18,7 +16,7 @@ defmodule Type.Inference.Opcodes.Terminal do
       if is_defined(regs, from) do
         jump_reg = fetch_type(regs, from)
 
-        result_type = ParallelParser.obtain_label(select_table[jump_reg])
+        result_type = BlockCache.depend_on(select_table[jump_reg])
         |> Enum.map(&(&1.makes))
         |> Type.union()
 
@@ -59,8 +57,8 @@ defmodule Type.Inference.Opcodes.Terminal do
   end
 
   opcode {:jump, {:f, dest}} do
-    forward(regs, _meta, ...) do
-      [jump_blk] = ParallelParser.obtain_label(dest)
+    forward(regs, meta, ...) do
+      [jump_blk] = BlockCache.depend_on({meta.module, dest})
 
       if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(regs, {:x, &1}))) do
         {:backprop, [put_reg(regs, reg, jump_blk.needs[reg])]}
@@ -73,8 +71,8 @@ defmodule Type.Inference.Opcodes.Terminal do
   end
 
   opcode {:wait, {:f, dest}} do
-    forward(regs, _meta, ...) do
-      [jump_blk] = ParallelParser.obtain_label(dest)
+    forward(regs, meta, ...) do
+      [jump_blk] = BlockCache.depend_on({meta.module, dest})
 
       if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(regs, {:x, &1}))) do
         {:backprop, [put_reg(regs, reg, jump_blk.needs[reg])]}

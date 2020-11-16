@@ -12,7 +12,6 @@ defmodule TypeTest.Opcode.TestsTest do
 
   alias Type.Inference.Block
   alias Type.Inference.Block.Parser
-  alias Type.Inference.Module.ParallelParser
   alias Type.Inference.Registers
 
   @op_set0 {:move, {:atom, :foo}, {:x, 0}}
@@ -20,10 +19,11 @@ defmodule TypeTest.Opcode.TestsTest do
   setup do
     # preseed the test thread with a message containing the block
     # that's going to drop in.
-    ParallelParser.send_lookup(self(), 10, :fun, 0, [%Block{
-      needs: %{0 => builtin(:integer)},
-      makes: builtin(:float)
-    }])
+    #ParallelParser.send_lookup(self(), 10, :fun, 0, [%Block{
+    #  needs: %{0 => builtin(:integer)},
+    #  makes: builtin(:float)
+    #}])
+    :ok
   end
 
   describe "is_integer opcode" do
@@ -33,10 +33,11 @@ defmodule TypeTest.Opcode.TestsTest do
     setup do
       # preseed the test thread with a message containing the block
       # that's going to drop in.
-      ParallelParser.send_lookup(self(), 11, :fun, 0, [%Block{
-        needs: %{0 => builtin(:atom)},
-        makes: builtin(:float)
-      }])
+      #ParallelParser.send_lookup(self(), 11, :fun, 0, [%Block{
+      #  needs: %{0 => builtin(:atom)},
+      #  makes: builtin(:float)
+      #}])
+      :ok
     end
 
     test "forward propagates the type on an integer" do

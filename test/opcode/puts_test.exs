@@ -12,7 +12,6 @@ defmodule TypeTest.Opcode.PutsTest do
 
   alias Type.Inference.Block
   alias Type.Inference.Block.Parser
-  alias Type.Inference.Module.ParallelParser
   alias Type.Inference.Registers
 
   describe "put_list with a nil parameter" do

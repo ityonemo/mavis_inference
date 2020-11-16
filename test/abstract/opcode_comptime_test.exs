@@ -214,4 +214,39 @@ defmodule TypeTest.Abstract.ComptimeTest do
 
     refute warnings =~ "is unused"
   end
+
+  @unused_term_regression_check """
+  defmodule TypeTest.Reg0 do
+    use Type.Inference.Opcodes
+
+    opcode {:gc_bif, :length, _fail, _, [from], to} do
+      forward(regs, _meta, ...) when not is_defined(regs, from) do
+        {:backprop, [put_reg(regs, from, %Type.List{})]}
+      end
+
+      forward(regs, _meta, ...) when is_reg(regs, from, []) do
+        {:ok, put_reg(regs, to, 0)}
+      end
+
+      forward(regs, _meta, ...) do
+        cond do
+          match?(%Type.List{nonempty: true}, fetch_type(regs, from)) ->
+            {:ok, put_reg(regs, to, builtin(:pos_integer))}
+          match?(%Type.List{}, fetch_type(regs, from)) ->
+            {:ok, put_reg(regs, to, builtin(:non_neg_integer))}
+        end
+      end
+
+      backprop :terminal
+    end
+  end
+  """
+
+  test "opcode warning regression test" do
+    warning = (capture_io :stderr, fn ->
+      Code.compile_string(@unused_term_regression_check)
+    end)
+
+    refute warning =~ "is unused"
+  end
 end

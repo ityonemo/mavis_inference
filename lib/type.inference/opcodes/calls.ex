@@ -2,63 +2,47 @@ defmodule Type.Inference.Opcodes.Calls do
 
   use Type.Inference.Opcodes
 
-  alias Type.Inference.Module.ParallelParser
   alias Type.Inference.Application.BlockCache
 
   # MOVE SEMANTICS
   @operands [:module, :exports, :attributes, :compile, :native, :md5]
 
   opcode {:call_ext, _arity1, {:extfunc, mod, fun, arity}} do
-    forward(_state, meta, ...) do
-      if meta.module == mod do
-        ParallelParser.obtain_call(fun, arity)
-        |> IO.inspect(label: "15")
-      else
-        BlockCache.depend_on({mod, fun, arity})
-        |> IO.inspect(label: "18")
-      end
+    forward(_state, _meta, ...) do
+      BlockCache.depend_on({mod, fun, arity})
     end
 
     backprop :terminal
   end
 
+  # disables _module_info.
+  opcode {:call_ext_only, _, {:extfunc, :erlang, :get_module_info, _}} do
+    forward(_state, _meta, ...) do
+      {:ok, builtin(:any)}
+    end
+    
+    backprop :terminal
+  end
+
   opcode {:call_ext_only, _arity1, {:extfunc, mod, fun, arity}} do
-    forward(_state, meta, ...) do
-      if meta.module == mod do
-        ParallelParser.obtain_call(fun, arity)
-        |> IO.inspect(label: "28")
-      else
-        BlockCache.depend_on({mod, fun, arity})
-        |> IO.inspect(label: "32")
-      end
+    forward(_state, _meta, ...) do
+      BlockCache.depend_on({mod, fun, arity})
     end
 
     backprop :terminal
   end
 
   opcode {:call_ext_last, _arity1, {:extfunc, mod, fun, arity}, _} do
-    forward(_state, meta, ...) do
-      if meta.module == mod do
-        ParallelParser.obtain_call(fun, arity)
-        |> IO.inspect(label: "43")
-      else
-        BlockCache.depend_on({mod, fun, arity})
-        |> IO.inspect(label: "46")
-      end
+    forward(_state, _meta, ...) do
+      BlockCache.depend_on({mod, fun, arity})
     end
 
     backprop :terminal
   end
 
   opcode {:call, _arity1, {mod, fun, arity}} do
-    forward(_state, meta, ...) do
-      if meta.module == mod do
-        ParallelParser.obtain_call(fun, arity)
-        |> IO.inspect(label: "57")
-      else
-        BlockCache.depend_on({mod, fun, arity})
-        |> IO.inspect(label: "60")
-      end
+    forward(_state, _meta, ...) do
+      BlockCache.depend_on({mod, fun, arity})
     end
 
     backprop :terminal
@@ -67,7 +51,7 @@ defmodule Type.Inference.Opcodes.Calls do
   opcode {:call_only, _arity1, {_this_module, function, arity}} do
     forward(state, _meta, ...) do
       # TODO: allow this to take alternate specs
-      [lookup] = ParallelParser.obtain_call(function, arity)
+      [lookup] = BlockCache.depend_on(function, arity)
 
       # make sure that all of the "needs" are taken care of.
       lookup.needs
@@ -84,16 +68,15 @@ defmodule Type.Inference.Opcodes.Calls do
   end
 
   opcode {:call_last, _arity1, {mod, fun, arity}, _} do
-    forward(_state, meta, ...) do
-      if meta.module == mod do
-        ParallelParser.obtain_call(fun, arity)
-        |> IO.inspect(label: "57")
-      else
-        BlockCache.depend_on({mod, fun, arity})
-        |> IO.inspect(label: "60")
-      end
+    forward(_state, _meta, ...) do
+      BlockCache.depend_on({mod, fun, arity})
     end
 
+    backprop :terminal
+  end
+
+  opcode {:call_fun, _arity} do
+    forward :unimplemented
     backprop :terminal
   end
 end

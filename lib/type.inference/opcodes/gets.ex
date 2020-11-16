@@ -1,8 +1,6 @@
 defmodule Type.Inference.Opcodes.Gets do
   use Type.Inference.Opcodes
 
-  alias Type.Inference.Module.ParallelParser
-
   opcode {:get_tuple_element, from, index, to} do
     forward(regs, _meta, ...) do
       case fetch_type(regs, from) do

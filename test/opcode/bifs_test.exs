@@ -221,4 +221,7 @@ defmodule TypeTest.Opcode.BifsTest do
 
     test "backpropagates correctly"
   end
+
+  test "bif node/0"
+  test "bif node/1"
 end

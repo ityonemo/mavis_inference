@@ -9,7 +9,6 @@ defmodule TypeTest.Opcode.SelectValTest do
 
   alias Type.Inference.Block
   alias Type.Inference.Block.Parser
-  alias Type.Inference.Module.ParallelParser
   alias Type.Inference.Registers
 
   describe "when the opcode is a register movement" do
@@ -20,15 +19,15 @@ defmodule TypeTest.Opcode.SelectValTest do
     setup do
       # preseed the test thread with a message containing the block
       # spec for the function that it is going to look up!
-      ParallelParser.send_lookup(self(), 4, :fun, 0, [%Block{
-        needs: %{},
-        makes: builtin(:integer)
-      }])
-
-      ParallelParser.send_lookup(self(), 5, :fun, 0, [%Block{
-        needs: %{},
-        makes: builtin(:float)
-      }])
+      #ParallelParser.send_lookup(self(), 4, :fun, 0, [%Block{
+      #  needs: %{},
+      #  makes: builtin(:integer)
+      #}])
+#
+      #ParallelParser.send_lookup(self(), 5, :fun, 0, [%Block{
+      #  needs: %{},
+      #  makes: builtin(:float)
+      #}])
     end
 
     test "forwards the value in the `from` register" do

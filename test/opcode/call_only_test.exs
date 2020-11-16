@@ -4,7 +4,6 @@ defmodule TypeTest.Opcode.CallOnlyTest do
 
   use ExUnit.Case, async: true
 
-  alias Type.Inference.Module.ParallelParser
   alias Type.Inference.Block.Parser
   alias Type.Inference.{Registers, Block}
 
@@ -19,10 +18,10 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     setup do
       # preseed the test thread with a message containing the block
       # spec for the function that it is going to look up!
-      ParallelParser.send_lookup(self(), nil, :fun, 1, [%Block{
-        needs: %{},
-        makes: builtin(:float)
-      }])
+      #ParallelParser.send_lookup(self(), nil, :fun, 1, [%Block{
+      #  needs: %{},
+      #  makes: builtin(:float)
+      #}])
     end
 
     test "clobbers the value in register 0" do
@@ -44,10 +43,10 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     setup do
       # preseed the test thread with a message containing the block
       # spec for the function that it is going to look up!
-      ParallelParser.send_lookup(self(), nil, :fun, 1, [%Block{
-        needs: %{0 => builtin(:integer)},
-        makes: builtin(:integer)
-      }])
+      #ParallelParser.send_lookup(self(), nil, :fun, 1, [%Block{
+      #  needs: %{0 => builtin(:integer)},
+      #  makes: builtin(:integer)
+      #}])
     end
 
     test "forwards the value in register 0" do
@@ -80,10 +79,10 @@ defmodule TypeTest.Opcode.CallOnlyTest do
     setup do
       # preseed the test thread with a message containing the block
       # spec for the function that it is going to look up!
-      ParallelParser.send_lookup(self(), nil, :fun, 2, [%Block{
-        needs: %{0 => builtin(:integer), 1 => builtin(:integer)},
-        makes: builtin(:float)
-      }])
+      #ParallelParser.send_lookup(self(), nil, :fun, 2, [%Block{
+      #  needs: %{0 => builtin(:integer), 1 => builtin(:integer)},
+      #  makes: builtin(:float)
+      #}])
     end
 
     test "forwards the value in register 0" do

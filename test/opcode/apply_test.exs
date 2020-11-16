@@ -3,8 +3,7 @@ defmodule TypeTest.Opcode.ApplyTest do
   # tests on the return opcode.
 
   use ExUnit.Case, async: true
-
-  alias Type.Inference.Module.ParallelParser
+  
   alias Type.Inference.Block.Parser
   alias Type.Inference.{Registers, Block}
 

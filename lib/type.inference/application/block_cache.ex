@@ -20,7 +20,7 @@ defmodule Type.Inference.Application.BlockCache do
 
   @impl true
   def init(_) do
-    {:ok, :ets.new(__MODULE__, [:set])}
+    {:ok, :ets.new(__MODULE__, [:set, :named_table, :public])}
   end
 
   #######################################################################
@@ -38,18 +38,19 @@ defmodule Type.Inference.Application.BlockCache do
 
     Registry.register(@pubsub, dep, ml(self_id))
 
-    case GenServer.call(__MODULE__, {:depend_on, dep, self_id}) do
-      {:ok, block} -> block
+    # warning: inverted with.
+    with []                     <- :ets.match(__MODULE__, {dep, :"$1"}),
+         :no_module when strict <- GenServer.call(__MODULE__, {:depend_on, dep, self_id}) do
+      dep
+      |> elem(0)
+      |> module_analyzer.run
+
+      wait_for(dep)
+    else
       :missing when strict ->
         raise Type.InferenceError, message: dep_to_msg(dep)
-      :no_module when strict ->
-        dep
-        |> elem(0)
-        |> module_analyzer.run
-
-        wait_for(dep)
-      :wait ->
-        wait_for(dep)
+      [[block]] -> block
+      {:ok, type} -> type
       _ ->
         wait_for(dep)
     end
@@ -62,14 +63,10 @@ defmodule Type.Inference.Application.BlockCache do
     # dependencies; those will be collapsed.
     search_for_circular_dep(dep, self_id)
 
-    # warning: inverted with block.
-    with []            <- :ets.match(table, {dep, :"$1"}),
-         [[:finished]] <- :ets.match(table, {elem(dep, 0), :"$1"}) do
-      {:reply, :missing, table}
-    else
-      [[:started]] -> {:reply, :wait, table}
-      []           -> {:reply, :no_module, table}
-      [[block]]    -> {:reply, {:ok, block}, table}
+    case :ets.match(table, {elem(dep, 0), :"$1"}) do
+      [[:finished]] -> {:reply, :missing, table}
+      [[:started]]  -> {:reply, :wait, table}
+      []            -> {:reply, :no_module, table}
     end
 
   catch

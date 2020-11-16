@@ -112,6 +112,19 @@ defmodule Type.Inference.Opcodes.Bifs do
     backprop :terminal
   end
 
+  opcode {:bif, :node, _fail, [from], dest} do
+    forward(regs, _meta, ...) when not is_defined(regs, from) do
+      {:backprop, [put_reg(regs, from, builtin(:identifier))]}
+    end
+
+    forward(regs, _meta, ...) do
+      {:ok, put_reg(regs, dest, builtin(:node))}
+    end
+
+    backprop :terminal
+  end
+
+
   opcode {:bif, :tuple_size, _fail, [from], to} do
     forward(regs, _meta, ...) when not is_defined(regs, from) do
       {:backprop, [put_reg(regs, from, %Type.Tuple{elements: :any})]}

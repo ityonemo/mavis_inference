@@ -11,7 +11,6 @@ defmodule TypeTest.Opcode.GetsTest do
 
   alias Type.Inference.Block
   alias Type.Inference.Block.Parser
-  alias Type.Inference.Module.ParallelParser
   alias Type.Inference.Registers
 
   describe "the get_tuple_element opcode" do
