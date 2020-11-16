@@ -149,8 +149,8 @@ defmodule TypeTest.Opcode.GcBifsTest do
     {builtin(:neg_integer), builtin(:pos_integer)} => builtin(:integer),
     {builtin(:neg_integer), 0}                     => builtin(:neg_integer),
     {builtin(:neg_integer), builtin(:neg_integer)} => builtin(:neg_integer),
-    {builtin(:integer),     builtin(:float)}       => builtin(:float),
-    {builtin(:float),       builtin(:integer)}     => builtin(:float),
+    {builtin(:pos_integer), builtin(:float)}       => builtin(:float),
+    {builtin(:float),       builtin(:pos_integer)} => builtin(:float),
     {builtin(:float),       builtin(:float)}       => builtin(:float)}
 
   describe "when the opcode is the addition bif" do
@@ -179,8 +179,8 @@ defmodule TypeTest.Opcode.GcBifsTest do
     {builtin(:neg_integer), builtin(:pos_integer)} => builtin(:neg_integer),
     {builtin(:neg_integer), 0}                     => builtin(:neg_integer),
     {builtin(:neg_integer), builtin(:neg_integer)} => builtin(:integer),
-    {builtin(:integer),     builtin(:float)}       => builtin(:float),
-    {builtin(:float),       builtin(:integer)}     => builtin(:float),
+    {builtin(:pos_integer), builtin(:float)}       => builtin(:float),
+    {builtin(:float),       builtin(:pos_integer)} => builtin(:float),
     {builtin(:float),       builtin(:float)}       => builtin(:float)}
 
   describe "when the opcode is the subtraction bif" do
@@ -209,8 +209,8 @@ defmodule TypeTest.Opcode.GcBifsTest do
     {builtin(:neg_integer), builtin(:pos_integer)} => builtin(:neg_integer),
     {builtin(:neg_integer), 0}                     => 0,
     {builtin(:neg_integer), builtin(:neg_integer)} => builtin(:pos_integer),
-    {builtin(:integer),     builtin(:float)}       => builtin(:float),
-    {builtin(:float),       builtin(:integer)}     => builtin(:float),
+    {builtin(:pos_integer), builtin(:float)}       => builtin(:float),
+    {builtin(:float),       builtin(:pos_integer)} => builtin(:float),
     {builtin(:float),       builtin(:float)}       => builtin(:float)}
 
   describe "when the opcode is the multiplication bif" do
@@ -237,10 +237,15 @@ defmodule TypeTest.Opcode.GcBifsTest do
       |> Parser.do_forward
       |> Parser.do_forward
 
-      assert %{histories: [
+      # there is a pos integer, bitstring -> pos_integer story.
+      assert Enum.any?(state.histories, &match?(
         [%{x: %{0 => builtin(:pos_integer)}}, _,
-         %{x: %{0 => builtin(:pos_integer), 1 => builtin(:bitstring)}}] | _
-      ]} = state
+         %{x: %{0 => builtin(:pos_integer), 1 => builtin(:bitstring)}}], &1))
+
+      # and a 0 -> non_neg_integer story.
+      assert Enum.any?(state.histories, &match?(
+        [%{x: %{0 => builtin(:non_neg_integer)}}, _,
+         %{x: %{0 => 0, 1 => builtin(:bitstring)}}], &1))
     end
   end
 end

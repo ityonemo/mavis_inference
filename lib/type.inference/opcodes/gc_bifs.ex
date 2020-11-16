@@ -85,17 +85,22 @@ defmodule Type.Inference.Opcodes.GcBifs do
   # TODO: make this not be as crazy
   @int_types [builtin(:pos_integer), 0, builtin(:neg_integer)]
   @num_types [builtin(:float) | @int_types]
-  @quotient_types [builtin(:pos_integer), builtin(:neg_integer), builtin(:float)]
+  @quotient_types [builtin(:pos_integer), builtin(:neg_integer)]
 
-  # there is probably a better way to do this.
-  defp do_add(builtin(:float),       _),                     do: builtin(:float)
-  defp do_add(_,                     builtin(:float)),       do: builtin(:float)
-  defp do_add(0,                     any),                   do: any
-  defp do_add(any,                   0),                     do: any
-  defp do_add(builtin(:pos_integer), builtin(:pos_integer)), do: builtin(:pos_integer)
-  defp do_add(builtin(:pos_integer), builtin(:neg_integer)), do: builtin(:integer)
-  defp do_add(builtin(:neg_integer), builtin(:pos_integer)), do: builtin(:integer)
-  defp do_add(builtin(:neg_integer), builtin(:neg_integer)), do: builtin(:neg_integer)
+  @add_fn Type.union([
+    %Type.Function{params: [builtin(:float),       builtin(:integer)],     return: builtin(:float)},
+    %Type.Function{params: [builtin(:integer),     builtin(:float)],       return: builtin(:float)},
+    %Type.Function{params: [builtin(:float),       builtin(:float)],       return: builtin(:float)},
+    %Type.Function{params: [builtin(:pos_integer), builtin(:pos_integer)], return: builtin(:pos_integer)},
+    %Type.Function{params: [builtin(:pos_integer), 0],                     return: builtin(:pos_integer)},
+    %Type.Function{params: [builtin(:pos_integer), builtin(:neg_integer)], return: builtin(:integer)},
+    %Type.Function{params: [0,                     builtin(:pos_integer)], return: builtin(:pos_integer)},
+    %Type.Function{params: [0,                     0],                     return: 0},
+    %Type.Function{params: [0,                     builtin(:neg_integer)], return: builtin(:neg_integer)},
+    %Type.Function{params: [builtin(:neg_integer), builtin(:pos_integer)], return: builtin(:integer)},
+    %Type.Function{params: [builtin(:neg_integer), 0],                     return: builtin(:neg_integer)},
+    %Type.Function{params: [builtin(:neg_integer), builtin(:neg_integer)], return: builtin(:neg_integer)}
+  ])
 
   opcode {:gc_bif, :+, _, _, [left, right], to} do
     forward(regs, _meta, ...) when not is_defined(regs, left) do
@@ -113,7 +118,7 @@ defmodule Type.Inference.Opcodes.GcBifs do
     forward(regs, _meta, ...) do
       ltype = fetch_type(regs, left)
       rtype = fetch_type(regs, right)
-      res = do_add(ltype, rtype)
+      {:ok, res} = Type.Function.apply_types(@add_fn, [ltype, rtype])
       {:ok, put_reg(regs, to, res)}
     end
 
@@ -121,15 +126,20 @@ defmodule Type.Inference.Opcodes.GcBifs do
     backprop :terminal
   end
 
-  defp do_sub(_,                     builtin(:float)),       do: builtin(:float)
-  defp do_sub(builtin(:float),       _),                     do: builtin(:float)
-  defp do_sub(0,                     builtin(:pos_integer)), do: builtin(:neg_integer)
-  defp do_sub(0,                     builtin(:neg_integer)), do: builtin(:pos_integer)
-  defp do_sub(any,                   0),                     do: any
-  defp do_sub(builtin(:pos_integer), builtin(:pos_integer)), do: builtin(:integer)
-  defp do_sub(builtin(:pos_integer), builtin(:neg_integer)), do: builtin(:pos_integer)
-  defp do_sub(builtin(:neg_integer), builtin(:pos_integer)), do: builtin(:neg_integer)
-  defp do_sub(builtin(:neg_integer), builtin(:neg_integer)), do: builtin(:integer)
+  @sub_fn Type.union([
+    %Type.Function{params: [builtin(:float),       builtin(:integer)],     return: builtin(:float)},
+    %Type.Function{params: [builtin(:integer),     builtin(:float)],       return: builtin(:float)},
+    %Type.Function{params: [builtin(:float),       builtin(:float)],       return: builtin(:float)},
+    %Type.Function{params: [builtin(:pos_integer), builtin(:pos_integer)], return: builtin(:integer)},
+    %Type.Function{params: [builtin(:pos_integer), 0],                     return: builtin(:pos_integer)},
+    %Type.Function{params: [builtin(:pos_integer), builtin(:neg_integer)], return: builtin(:pos_integer)},
+    %Type.Function{params: [0,                     builtin(:pos_integer)], return: builtin(:neg_integer)},
+    %Type.Function{params: [0,                     0],                     return: 0},
+    %Type.Function{params: [0,                     builtin(:neg_integer)], return: builtin(:pos_integer)},
+    %Type.Function{params: [builtin(:neg_integer), builtin(:pos_integer)], return: builtin(:neg_integer)},
+    %Type.Function{params: [builtin(:neg_integer), 0],                     return: builtin(:neg_integer)},
+    %Type.Function{params: [builtin(:neg_integer), builtin(:neg_integer)], return: builtin(:integer)}
+  ])
 
   opcode {:gc_bif, :-, _, _, [left, right], to} do
     forward(regs, _meta, ...) when not is_defined(regs, left) do
@@ -137,13 +147,13 @@ defmodule Type.Inference.Opcodes.GcBifs do
     end
 
     forward(regs, _meta, ...) when not is_defined(regs, right) do
-      {:backprop, Enum.map(@int_types, &put_reg(regs, right, &1))}
+      {:backprop, Enum.map(@num_types, &put_reg(regs, right, &1))}
     end
 
     forward(regs, _meta, ...) do
       ltype = fetch_type(regs, left)
       rtype = fetch_type(regs, right)
-      res = do_sub(ltype, rtype)
+      {:ok, res} = Type.Function.apply_types(@sub_fn, [ltype, rtype])
       {:ok, put_reg(regs, to, res)}
     end
 
@@ -151,15 +161,20 @@ defmodule Type.Inference.Opcodes.GcBifs do
     backprop :terminal
   end
 
-  # there is probably a better way to do this.
-  defp do_mul(_,                     builtin(:float)),       do: builtin(:float)
-  defp do_mul(builtin(:float),       _),                     do: builtin(:float)
-  defp do_mul(0,                     _any),                  do: 0
-  defp do_mul(_any,                  0),                     do: 0
-  defp do_mul(builtin(:pos_integer), builtin(:pos_integer)), do: builtin(:pos_integer)
-  defp do_mul(builtin(:pos_integer), builtin(:neg_integer)), do: builtin(:neg_integer)
-  defp do_mul(builtin(:neg_integer), builtin(:pos_integer)), do: builtin(:neg_integer)
-  defp do_mul(builtin(:neg_integer), builtin(:neg_integer)), do: builtin(:pos_integer)
+  @mul_fn Type.union([
+    %Type.Function{params: [builtin(:float),       builtin(:integer)],     return: builtin(:float)},
+    %Type.Function{params: [builtin(:integer),     builtin(:float)],       return: builtin(:float)},
+    %Type.Function{params: [builtin(:float),       builtin(:float)],       return: builtin(:float)},
+    %Type.Function{params: [builtin(:pos_integer), builtin(:pos_integer)], return: builtin(:pos_integer)},
+    %Type.Function{params: [builtin(:pos_integer), 0],                     return: 0},
+    %Type.Function{params: [builtin(:pos_integer), builtin(:neg_integer)], return: builtin(:neg_integer)},
+    %Type.Function{params: [0,                     builtin(:pos_integer)], return: 0},
+    %Type.Function{params: [0,                     0],                     return: 0},
+    %Type.Function{params: [0,                     builtin(:neg_integer)], return: 0},
+    %Type.Function{params: [builtin(:neg_integer), builtin(:pos_integer)], return: builtin(:neg_integer)},
+    %Type.Function{params: [builtin(:neg_integer), 0],                     return: 0},
+    %Type.Function{params: [builtin(:neg_integer), builtin(:neg_integer)], return: builtin(:pos_integer)}
+  ])
 
   opcode {:gc_bif, :*, _, _, [left, right], to} do
     forward(regs, _meta, ...) when not is_defined(regs, left) do
@@ -173,7 +188,7 @@ defmodule Type.Inference.Opcodes.GcBifs do
     forward(regs, _meta, ...) do
       ltype = fetch_type(regs, left)
       rtype = fetch_type(regs, right)
-      res = do_mul(ltype, rtype)
+      {:ok, res} = Type.Function.apply_types(@mul_fn, [ltype, rtype])
       {:ok, put_reg(regs, to, res)}
     end
 
@@ -181,16 +196,18 @@ defmodule Type.Inference.Opcodes.GcBifs do
     backprop :terminal
   end
 
-  defp do_div(0,                     _),                     do: 0
-  defp do_div(_any,                  0),                     do: builtin(:none)
-  defp do_div(builtin(:pos_integer), builtin(:pos_integer)), do: builtin(:pos_integer)
-  defp do_div(builtin(:pos_integer), builtin(:neg_integer)), do: builtin(:neg_integer)
-  defp do_div(builtin(:neg_integer), builtin(:pos_integer)), do: builtin(:neg_integer)
-  defp do_div(builtin(:neg_integer), builtin(:neg_integer)), do: builtin(:pos_integer)
+  @div_fn Type.union([
+    %Type.Function{params: [builtin(:pos_integer), builtin(:pos_integer)], return: builtin(:pos_integer)},
+    %Type.Function{params: [builtin(:pos_integer), builtin(:neg_integer)], return: builtin(:neg_integer)},
+    %Type.Function{params: [0,                     builtin(:pos_integer)], return: 0},
+    %Type.Function{params: [0,                     builtin(:neg_integer)], return: 0},
+    %Type.Function{params: [builtin(:neg_integer), builtin(:pos_integer)], return: builtin(:neg_integer)},
+    %Type.Function{params: [builtin(:neg_integer), builtin(:neg_integer)], return: builtin(:pos_integer)}
+  ])
 
   opcode {:gc_bif, :div, _, _, [left, right], to} do
     forward(regs, _meta, ...) when not is_defined(regs, left) do
-      {:backprop, Enum.map(@num_types, &put_reg(regs, left, &1))}
+      {:backprop, Enum.map(@int_types, &put_reg(regs, left, &1))}
     end
 
     forward(regs, _meta, ...) when not is_defined(regs, right) do
@@ -200,7 +217,7 @@ defmodule Type.Inference.Opcodes.GcBifs do
     forward(regs, _meta, ...) do
       ltype = fetch_type(regs, left)
       rtype = fetch_type(regs, right)
-      res = do_div(ltype, rtype)
+      {:ok, res} = Type.Function.apply_types(@mul_fn, [ltype, rtype])
       {:ok, put_reg(regs, to, res)}
     end
 
