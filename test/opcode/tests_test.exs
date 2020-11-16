@@ -84,8 +84,6 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => builtin(:atom)}, module: __MODULE__)
       |> fast_forward
 
-      final = fast_forward(state)
-
       assert %Registers{x: %{0 => builtin(:atom)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
     end
@@ -129,8 +127,6 @@ defmodule TypeTest.Opcode.TestsTest do
       state = @op_is_nil_all
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
-
-      final = fast_forward(state)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
@@ -193,8 +189,6 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
 
-      final = fast_forward(state)
-
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
     end
@@ -246,8 +240,6 @@ defmodule TypeTest.Opcode.TestsTest do
       state = @op_is_atom_all
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
-
-      final = fast_forward(state)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
@@ -301,8 +293,6 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
 
-      final = fast_forward(state)
-
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
     end
@@ -344,8 +334,6 @@ defmodule TypeTest.Opcode.TestsTest do
       state = @op_is_ttup_all
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
-
-      final = fast_forward(state)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
@@ -480,8 +468,6 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
 
-      final = fast_forward(state)
-
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
     end
@@ -568,8 +554,6 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
 
-      final = fast_forward(state)
-
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
     end
@@ -612,8 +596,6 @@ defmodule TypeTest.Opcode.TestsTest do
       state = @op_is_f2_1_all
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
-
-      final = fast_forward(state)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
@@ -664,8 +646,6 @@ defmodule TypeTest.Opcode.TestsTest do
       state = @op_is_map_all
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
-
-      final = fast_forward(state)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
@@ -734,8 +714,6 @@ defmodule TypeTest.Opcode.TestsTest do
       state = @op_is_eq_exact_all
       |> Parser.new(preload: %{0 => builtin(:integer), 1 => builtin(:float)}, module: __MODULE__)
       |> fast_forward
-
-      final = fast_forward(state)
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:float)}} = history_start(state)
       assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
@@ -825,8 +803,6 @@ defmodule TypeTest.Opcode.TestsTest do
       state = @op_is_ne_all
       |> Parser.new(preload: %{0 => builtin(:integer), 1 => builtin(:atom)}, module: __MODULE__)
       |> fast_forward
-
-      final = fast_forward(state)
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:atom)}} = history_start(state)
       assert %Registers{x: %{0 => :foo}} = history_finish(state)

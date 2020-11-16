@@ -33,7 +33,7 @@ defmodule Type.Inference.Application.BlockCache do
   def depend_on(dep, _opts) when elem(dep, 0) == nil do
     raise Type.InferenceError, message: "attempting to depend on `nil` module"
   end
-  def depend_on(dep, opts) do
+  def depend_on(dep, opts) when is_tuple(dep) do
     # Pull the process's self-identity from the Process dictionary.
     self_id = Process.get(:block_id)
     # debug options
@@ -62,7 +62,7 @@ defmodule Type.Inference.Application.BlockCache do
     Registry.unregister(@pubsub, dep)
   end
 
-  defp depend_on_impl(dep, self_id, _from, table) do
+  defp depend_on_impl(dep, self_id, _from, table) when is_tuple(dep) do
     # before registering the dependency, attempt to resolve circular
     # dependencies; those will be collapsed.
     search_for_circular_dep(dep, self_id)
@@ -180,8 +180,11 @@ defmodule Type.Inference.Application.BlockCache do
   ## preseed
   # mostly for testing.
   def preseed(mfa_or_ml, block) do
-    :ets.insert(__MODULE__, {mfa_or_ml, block})
-    :ok
+    GenServer.call(__MODULE__, {:preseed, mfa_or_ml, block})
+  end
+  defp preseed_impl(mfa_or_ml, block, _from, table) do
+    :ets.insert(table, {mfa_or_ml, block})
+    {:reply, :ok, table}
   end
 
   #############################################################################
@@ -199,6 +202,9 @@ defmodule Type.Inference.Application.BlockCache do
   end
   def handle_call({:finish, module}, from, table) do
     finish_impl(module, from, table)
+  end
+  def handle_call({:preseed, mfa_or_ml, block}, from, table) do
+    preseed_impl(mfa_or_ml, block, from, table)
   end
 
 end

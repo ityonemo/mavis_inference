@@ -213,7 +213,7 @@ defmodule TypeTest.Opcode.BifsTest do
       |> Parser.do_forward
 
       # TODO: consider changing this if we can have a tuple type with a minimum size
-      assert %{0 => %Type.Tuple{elements: {min: 0}}} = history_start(state).x
+      assert %{0 => %Type.Tuple{elements: {:min, 0}}} = history_start(state).x
       assert %{3 => builtin(:non_neg_integer)} = history_finish(state).x
     end
 

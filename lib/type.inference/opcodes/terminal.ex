@@ -1,8 +1,10 @@
 defmodule Type.Inference.Opcodes.Terminal do
   use Type.Inference.Opcodes
 
+  alias Type.Inference.Application.BlockCache
+
   opcode {:select_val, from, {:f, _fail}, {:list, list}} do
-    forward(regs, _meta, ...) do
+    forward(regs, meta, ...) do
       # TODO: fix this so that it merges instead of
       # clobbering, for example if we have two String.t's coming
       # in with different jump registers.
@@ -16,7 +18,7 @@ defmodule Type.Inference.Opcodes.Terminal do
       if is_defined(regs, from) do
         jump_reg = fetch_type(regs, from)
 
-        result_type = BlockCache.depend_on(select_table[jump_reg])
+        result_type = BlockCache.depend_on({meta.module, select_table[jump_reg]})
         |> Enum.map(&(&1.makes))
         |> Type.union()
 
