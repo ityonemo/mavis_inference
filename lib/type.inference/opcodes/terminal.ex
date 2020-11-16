@@ -68,7 +68,7 @@ defmodule Type.Inference.Opcodes.Terminal do
       [jump_blk] = BlockCache.depend_on({meta.module, dest})
 
       if reg = Enum.find(Map.keys(jump_blk.needs), &(!is_defined(regs, {:x, &1}))) do
-        {:backprop, [put_reg(regs, reg, jump_blk.needs[reg])]}
+        {:backprop, [put_reg(regs, {:x, reg}, jump_blk.needs[reg])]}
       else
         {:ok, put_reg(regs, {:x, 0}, jump_blk.makes)}
       end
