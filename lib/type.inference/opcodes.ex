@@ -20,13 +20,14 @@ defmodule Type.Inference.Opcodes do
 
   defmodule Operations do
     @blank {:_, [], nil}
-    @enforce_keys ~w(type opcode_ast code_ast)a
+    @enforce_keys ~w(type opcode_ast code_ast line)a
     defstruct @enforce_keys ++ [reg_ast: @blank, meta_ast: @blank, guard_ast: nil]
 
     @type t :: %__MODULE__{
       type: :forward | :backprop,
       opcode_ast: Macro.t,
       code_ast: Macro.t | :noop | :unimplemented,
+      line: pos_integer,
       reg_ast: Macro.t,
       meta_ast: Macro.t,
       guard_ast: Macro.t | nil,
@@ -39,29 +40,58 @@ defmodule Type.Inference.Opcodes do
     end
 
     @spec to_ast(t) :: Macro.t
-    def to_ast(op = %{guard_ast: nil}) do
-      opcode_ast = silenced_opcode(op)
-      quote do
-        def unquote(op.type)(unquote(opcode_ast), unquote(op.reg_ast), unquote(op.meta_ast)) do
-          unquote(op.code_ast)
+    def to_ast(op! = %{guard_ast: nil}) do
+      op! = op!
+      |> opcode_reline
+      |> opcode_silence
+
+      quote line: op!.line do
+        def unquote(op!.type)(unquote(op!.opcode_ast), unquote(op!.reg_ast), unquote(op!.meta_ast)) do
+          unquote(op!.code_ast)
         end
       end
     end
 
-    def to_ast(op) do
-      {:def, [context: Elixir, import: Kernel],
+    def to_ast(op!) do
+      op! = op!
+      |> opcode_reline
+      |> opcode_silence
+
+      {:def, [context: Elixir, import: Kernel, line: op!.line],
       [
-        {:when, [context: Elixir],
+        {:when, [context: Elixir, line: op!.line],
          [
-           {op.type, [], [op.opcode_ast, op.reg_ast, op.meta_ast]},
-           op.guard_ast
+           {op!.type, [line: op!.line], [op!.opcode_ast, op!.reg_ast, op!.meta_ast]},
+           op!.guard_ast
          ]},
-        [do: op.code_ast]
+        [do: op!.code_ast]
       ]}
     end
 
-    # Tools for manipulating silencing opcode warnings.
-    defp silenced_opcode(operation = %{opcode_ast: opcode_ast}) do
+    # maniplates the ast of the opcode so that the line number for the
+    # function header matches the location in the parent.
+    defp opcode_reline(op) do
+      %{op | opcode_ast: substitute_line(op.opcode_ast, op.line)}
+    end
+
+    defp substitute_line({id, meta, params}, line) when is_list(params) do
+      {id, Keyword.put(meta, :line, line), Enum.map(params, &substitute_line(&1, line))}
+    end
+    defp substitute_line({id, meta, atom}, line) when is_atom(atom) do
+      {id, Keyword.put(meta, :line, line), atom}
+    end
+    defp substitute_line(list, line) when is_list(list) do
+      Enum.map(list, &substitute_line(&1, line))
+    end
+    defp substitute_line({a, b}, line) do
+      {substitute_line(a, line), substitute_line(b, line)}
+    end
+    defp substitute_line(other,_), do: other
+
+    # manipulates the AST so that unused variable warnings are silenced,
+    # because a general opcode operation definition might use more opcodes
+    # than are actually used by the body of the function.
+    defp opcode_silence(operation = %{opcode_ast: opcode_ast}) do
       unused = opcode_ast
       |> get_variables
       |> Enum.reject(&String.starts_with?(Atom.to_string(&1), "_"))
@@ -71,15 +101,15 @@ defmodule Type.Inference.Opcodes do
       |> Kernel.--(get_variables(operation.guard_ast))
 
       #opcode_ast
-      substitute(opcode_ast, unused)
+      %{operation | opcode_ast: substitute(opcode_ast, unused)}
     end
 
     defp get_variables({atom, _, ctx}) when is_atom(ctx), do: [atom]
     defp get_variables({a, b}) do
       Enum.flat_map([a, b], &get_variables/1)
     end
-    defp get_variables({_, _, list}) do
-      get_variables(list)
+    defp get_variables({params, _, list}) do
+      get_variables(params) ++ get_variables(list)
     end
     defp get_variables(list) when is_list(list) do
       Enum.flat_map(list, &get_variables/1)
@@ -91,7 +121,7 @@ defmodule Type.Inference.Opcodes do
       {substitute(atom, unused), meta, ctx}
     end
     defp substitute({call, meta, list}, unused) when is_list(list) do
-      {call, meta, substitute(list, unused)}
+      {substitute(call, unused), meta, substitute(list, unused)}
     end
     defp substitute({a, b}, unused) do
       {substitute(a, unused), substitute(b, unused)}
@@ -230,10 +260,15 @@ defmodule Type.Inference.Opcodes do
     })
   end
 
+  # picks up the line number from the ast of the register AST.
+  # for some reason, more reliable than taking it from __CALLER__.line
+  defp get_line(reg_ast), do: reg_ast |> elem(1) |> Keyword.get(:line)
+
   defmacro forward(reg_ast, meta_ast, {:..., _, _}, do: code_ast) do
     # retrieve the opcode.
     stash(__CALLER__.module,
       type: :forward,
+      line: get_line(reg_ast),
       reg_ast: reg_ast,
       meta_ast: meta_ast,
       code_ast: code_ast)
@@ -242,6 +277,7 @@ defmodule Type.Inference.Opcodes do
   defmacro forward(mode) when mode in [:noop, :unimplemented] do
     stash(__CALLER__.module,
       type: :forward,
+      line: __CALLER__.line,
       code_ast: mode)
   end
 
@@ -249,6 +285,7 @@ defmodule Type.Inference.Opcodes do
     {guard, code} = split(guards_and_code)
     stash(__CALLER__.module,
       type: :forward,
+      line: get_line(reg_ast),
       reg_ast: reg_ast,
       meta_ast: meta_ast,
       code_ast: code,
@@ -258,6 +295,7 @@ defmodule Type.Inference.Opcodes do
   defmacro backprop(reg_ast, meta_ast, {:..., _, _}, do: code_ast) do
     stash(__CALLER__.module,
       type: :backprop,
+      line: get_line(reg_ast),
       reg_ast: reg_ast,
       meta_ast: meta_ast,
       code_ast: code_ast)
@@ -267,6 +305,7 @@ defmodule Type.Inference.Opcodes do
     {guard, code} = split(guards_and_code)
     stash(__CALLER__.module,
       type: :backprop,
+      line: get_line(reg_ast),
       reg_ast: reg_ast,
       meta_ast: meta_ast,
       code_ast: code,
@@ -276,6 +315,7 @@ defmodule Type.Inference.Opcodes do
   defmacro backprop(mode) when mode in [:noop, :unimplemented] do
     stash(__CALLER__.module,
     type: :backprop,
+    line: __CALLER__.line,
     code_ast: mode)
   end
 
@@ -287,6 +327,7 @@ defmodule Type.Inference.Opcodes do
 
   @typep stash_params :: [
     type: :forward | :backprop,
+    line: pos_integer,
     code_ast: Macro.t | :noop | :unimplemented,
     reg_ast: Macro.t | nil,
     meta_ast: Macro.t | nil,

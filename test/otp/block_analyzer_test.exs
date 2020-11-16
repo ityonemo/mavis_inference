@@ -22,7 +22,7 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
 
   describe "when the analyzer is passed an export" do
     test "the result is retrievable from the block cache by mfa" do
-      expect(Stub, :parse, fn [:return] -> @default_block end)
+      expect(Stub, :parse, fn [:return], _-> @default_block end)
 
       BlockAnalyzer.run({__MODULE__, {:mfa_by_mfa, 1}, 10}, [:return], Stub)
 
@@ -35,7 +35,7 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
     end
 
     test "the result is retrievable from the block cache by label" do
-      expect(Stub, :parse, fn [:return] -> @default_block end)
+      expect(Stub, :parse, fn [:return], _ -> @default_block end)
 
       BlockAnalyzer.run({__MODULE__, {:mfa_by_label, 1}, 11}, [:return], Stub)
 
@@ -50,7 +50,7 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
 
   describe "when the analyzer is passed a label" do
     test "the result is retrievable from the block cache by label" do
-      expect(Stub, :parse, fn [:return] -> @default_block end)
+      expect(Stub, :parse, fn [:return], _ -> @default_block end)
 
       BlockAnalyzer.run({__MODULE__, nil, 12}, [:return], Stub)
 
@@ -62,11 +62,11 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
   describe "the analyzer can detect circular dependencies" do
     test "when there are two blocks that are dependent on each other" do
       Stub
-      |> expect(:parse, fn [:return] ->
+      |> expect(:parse, fn [:return], _ ->
         BlockCache.depend_on({__MODULE__, 14}, strict: false)
         @default_block
       end)
-      |> expect(:parse, fn [:return] ->
+      |> expect(:parse, fn [:return], _ ->
         BlockCache.depend_on({__MODULE__, 13}, strict: false)
         @default_block
       end)
@@ -81,15 +81,15 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
 
     test "when there are three blocks that are codependent" do
       Stub
-      |> expect(:parse, fn [:return] ->
+      |> expect(:parse, fn [:return], _ ->
         BlockCache.depend_on({__MODULE__, 16}, strict: false)
         @default_block
       end)
-      |> expect(:parse, fn [:return] ->
+      |> expect(:parse, fn [:return], _ ->
         BlockCache.depend_on({__MODULE__, 17}, strict: false)
         @default_block
       end)
-      |> expect(:parse, fn [:return] ->
+      |> expect(:parse, fn [:return], _ ->
         BlockCache.depend_on({__MODULE__, 15}, strict: false)
         @default_block
       end)
@@ -120,7 +120,7 @@ defmodule TypeTest.Inference.OTP.BlockAnalyzerTest do
 
     defmodule AnalysisTest do
       @default_block default_block
-      def run(module) do
+      def run(_module) do
         send(self(), {:block, {__MODULE__, :run, 1}, @default_block})
         {:ok, self()}
       end

@@ -1,6 +1,6 @@
 
 defmodule Type.Inference.Block.Parser.Api do
-  @callback parse([Module.opcode]) :: Block.t
+  @callback parse([Module.opcode], keyword) :: Block.t
 end
 
 defmodule Type.Inference.Block.Parser do
@@ -96,7 +96,7 @@ defmodule Type.Inference.Block.Parser do
       fn history = [latest | earlier] ->
         opcode
         |> reduce_forward(latest, state.meta, opcode_modules!)
-        |> validate_forward  # prevents stupid mistakes
+        |> validate_forward(opcode)  # prevents stupid mistakes
         |> case do
           {:ok, new_regs} -> prep_ok(new_regs, length(state.stack), history)
           {:backprop, replacement_regs} ->
@@ -226,14 +226,14 @@ defmodule Type.Inference.Block.Parser do
 
     @shortforms ~w(noop unimplemented no_return unknown)a
 
-    defp validate_forward(fwd = {:ok, %Registers{}}), do: fwd
-    defp validate_forward(fwd = {:ok, [%Registers{} | _]}), do: fwd
-    defp validate_forward(fwd = {:ok, [{:freeze, %Registers{}} | _]}), do: fwd
-    defp validate_forward(bck = {:backprop, [%Registers{} | _]}), do: bck
-    defp validate_forward(bck = {:backprop, []}), do: bck
-    defp validate_forward(short) when short in @shortforms, do: short
-    defp validate_forward(invalid) do
-      raise "invalid forward result #{inspect invalid}"
+    defp validate_forward(fwd = {:ok, %Registers{}}, _), do: fwd
+    defp validate_forward(fwd = {:ok, [%Registers{} | _]}, _), do: fwd
+    defp validate_forward(fwd = {:ok, [{:freeze, %Registers{}} | _]}, _), do: fwd
+    defp validate_forward(bck = {:backprop, [%Registers{} | _]}, _), do: bck
+    defp validate_forward(bck = {:backprop, []}, _), do: bck
+    defp validate_forward(short, _) when short in @shortforms, do: short
+    defp validate_forward(invalid, opcode) do
+      raise "invalid forward result #{inspect invalid} when processing opcode #{inspect opcode}"
     end
 
     defp validate_backprop(bck = {:ok, []}), do: bck
@@ -256,8 +256,8 @@ defmodule Type.Inference.Block.Parser do
     defp log_backprop(state), do: state
 
   else
-    defp validate_forward(any), do: any
-    defp validate_backprop(bck), do: bck
+    defp validate_forward(any, _), do: any
+    defp validate_backprop(bck, _), do: bck
 
     defp log_forward(state), do: state
     defp log_backprop(state), do: state

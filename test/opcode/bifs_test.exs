@@ -162,7 +162,7 @@ defmodule TypeTest.Opcode.BifsTest do
       |> Parser.do_forward
 
       # TODO: consider changing this if we can have a tuple type with a minimum size
-      assert %{1 => %Type.Tuple{elements: :any}} = history_start(state).x
+      assert %{1 => %Type.Tuple{elements: {:min, 0}}} = history_start(state).x
       assert %{3 => builtin(:any)} = history_finish(state).x
     end
 
@@ -183,7 +183,7 @@ defmodule TypeTest.Opcode.BifsTest do
       |> Parser.new
       |> Parser.do_forward
 
-      assert %{0 => builtin(:non_neg_integer), 1 => %Type.Tuple{elements: :any}} = history_finish(state).x
+      assert %{0 => builtin(:non_neg_integer), 1 => %Type.Tuple{elements: {:min, 0}}} = history_finish(state).x
       assert %{3 => builtin(:any)} = history_finish(state).x
     end
 
@@ -202,7 +202,7 @@ defmodule TypeTest.Opcode.BifsTest do
 
     test "forward propagates the tuple size on an any tuple" do
       assert %{x: %{3 => builtin(:non_neg_integer)}} = [@op_tup_sz]
-      |> Parser.new(preload: %{0 => %Type.Tuple{elements: :any}})
+      |> Parser.new(preload: %{0 => %Type.Tuple{elements: {:min, 0}}})
       |> Parser.do_forward
       |> history_finish
     end
@@ -213,7 +213,7 @@ defmodule TypeTest.Opcode.BifsTest do
       |> Parser.do_forward
 
       # TODO: consider changing this if we can have a tuple type with a minimum size
-      assert %{0 => %Type.Tuple{elements: :any}} = history_start(state).x
+      assert %{0 => %Type.Tuple{elements: {:min, 0}}} = history_start(state).x
       assert %{3 => builtin(:non_neg_integer)} = history_finish(state).x
     end
 
@@ -221,4 +221,7 @@ defmodule TypeTest.Opcode.BifsTest do
 
     test "backpropagates correctly"
   end
+
+  test "bif node/0"
+  test "bif node/1"
 end

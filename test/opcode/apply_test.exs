@@ -4,12 +4,6 @@ defmodule TypeTest.Opcode.ApplyTest do
 
   use ExUnit.Case, async: true
 
-  alias Type.Inference.Module.ParallelParser
-  alias Type.Inference.Block.Parser
-  alias Type.Inference.{Registers, Block}
-
-  import Type
-
   @moduletag :opcodes
 
   describe "the apply 0 opcode" do

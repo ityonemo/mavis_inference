@@ -71,22 +71,22 @@ defmodule Type.Inference.Opcodes.Bifs do
   end
 
   # TODO: eliminate this with a function in mavis.
-  defp type_at(%Type.Tuple{elements: :any}, _), do: builtin(:any)
+  defp type_at(%Type.Tuple{elements: {:min, _}}, _), do: builtin(:any)
   defp type_at(%Type.Tuple{elements: el}, index), do: Enum.at(el, index)
 
-  defp tuple_el_union(%Type.Tuple{elements: :any}), do: builtin(:any)
+  defp tuple_el_union(%Type.Tuple{elements: {:min, _}}), do: builtin(:any)
   defp tuple_el_union(%Type.Tuple{elements: lst}), do: Type.union(lst)
 
   opcode {:bif, :element, _fail, [tuple, index], dest} do
     forward(regs, _meta, ...) when not is_defined(regs, tuple) do
-      {:backprop, [put_reg(regs, tuple, %Type.Tuple{elements: :any})]}
+      {:backprop, [put_reg(regs, tuple, %Type.Tuple{elements: {:min, 0}})]}
     end
 
     forward(regs, _meta, ...) when not is_defined(regs, index) do
-      case tuple.elements do
+      case fetch_type(regs, tuple).elements do
         lst when is_list(lst) ->
           {:backprop, [put_reg(regs, index, 0..(length(lst) - 1))]}
-        :any ->
+        {:min, 0} ->
           {:backprop, [put_reg(regs, index, builtin(:non_neg_integer))]}
         # also add {:min, number}
       end
@@ -112,13 +112,26 @@ defmodule Type.Inference.Opcodes.Bifs do
     backprop :terminal
   end
 
-  opcode {:bif, :tuple_size, _fail, [from], to} do
+  opcode {:bif, :node, _fail, [from], dest} do
     forward(regs, _meta, ...) when not is_defined(regs, from) do
-      {:backprop, [put_reg(regs, from, %Type.Tuple{elements: :any})]}
+      {:backprop, [put_reg(regs, from, builtin(:identifier))]}
     end
 
     forward(regs, _meta, ...) do
-      if match?(%Type.Tuple{elements: :any}, fetch_type(regs, from)) do
+      {:ok, put_reg(regs, dest, builtin(:node))}
+    end
+
+    backprop :terminal
+  end
+
+
+  opcode {:bif, :tuple_size, _fail, [from], to} do
+    forward(regs, _meta, ...) when not is_defined(regs, from) do
+      {:backprop, [put_reg(regs, from, %Type.Tuple{elements: {:min, 0}})]}
+    end
+
+    forward(regs, _meta, ...) do
+      if match?(%Type.Tuple{elements: {:min, 0}}, fetch_type(regs, from)) do
         {:ok, put_reg(regs, to, builtin(:non_neg_integer))}
       else
         {:ok, put_reg(regs, to, length(fetch_type(regs, from).elements))}

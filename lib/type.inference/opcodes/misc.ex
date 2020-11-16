@@ -2,8 +2,6 @@ defmodule Type.Inference.Opcodes.Misc do
 
   use Type.Inference.Opcodes
 
-  alias Type.Inference.Module.ParallelParser
-
   # LINE MARKER OPCODE
   opcode {:line, _}, :noop
 
@@ -51,4 +49,8 @@ defmodule Type.Inference.Opcodes.Misc do
   opcode :build_stacktrace, :noop
 
   opcode {:recv_mark, _}, :noop
+
+  opcode :timeout, :noop
+
+  opcode :remove_message, :noop
 end

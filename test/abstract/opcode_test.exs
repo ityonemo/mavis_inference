@@ -48,7 +48,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
         :noop
       end
 
-      backprop(regs, _meta, ...) do
+      backprop(_regs, _meta, ...) do
         :no_return
       end
     end
