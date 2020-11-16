@@ -111,14 +111,14 @@ defmodule Type.Inference.Opcodes.Tests do
     forward(regs, meta, ...) do
       # get the required values from te fail condition.
       jump_block = BlockCache.depend_on({meta.module, fail})
-
+      
       cond do
         not is_defined(regs, from) ->
           jump_needs = Enum.map(jump_block, &merge_reg(regs, &1.needs))
           tag_elems = List.duplicate(builtin(:any), length - 1)
           tag_tuple = %Type.Tuple{elements: [fetch_type(regs, tag) | tag_elems]}
           {:backprop, [put_reg(regs, from, tag_tuple) | jump_needs]}
-        Type.usable_as(fetch_type(regs, from), %Type.Tuple{elements: :any}) == :ok ->
+        Type.usable_as(fetch_type(regs, from), %Type.Tuple{elements: {:min, 0}}) == :ok ->
           {:ok, regs}
         true ->
           [jump_res] = jump_block
@@ -137,8 +137,8 @@ defmodule Type.Inference.Opcodes.Tests do
       cond do
         not is_defined(regs, from) ->
           jump_needs = Enum.map(jump_block, &merge_reg(regs, &1.needs))
-          {:backprop, [put_reg(regs, from, %Type.Tuple{elements: :any}) | jump_needs]}
-        Type.usable_as(fetch_type(regs, from), %Type.Tuple{elements: :any}) == :ok ->
+          {:backprop, [put_reg(regs, from, %Type.Tuple{elements: {:min, 0}}) | jump_needs]}
+        Type.usable_as(fetch_type(regs, from), %Type.Tuple{elements: {:min, 0}}) == :ok ->
           {:ok, regs}
         true ->
           [jump_res] = jump_block

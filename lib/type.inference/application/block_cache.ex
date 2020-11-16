@@ -29,7 +29,11 @@ defmodule Type.Inference.Application.BlockCache do
   ## depend_on
 
   @spec depend_on(Block.dep, keyword) :: Block.t
-  def depend_on(dep, opts \\ []) do
+  def depend_on(dep, opts \\ [])
+  def depend_on(dep, _opts) when elem(dep, 0) == nil do
+    raise Type.InferenceError, message: "attempting to depend on `nil` module"
+  end
+  def depend_on(dep, opts) do
     # Pull the process's self-identity from the Process dictionary.
     self_id = Process.get(:block_id)
     # debug options
@@ -172,6 +176,13 @@ defmodule Type.Inference.Application.BlockCache do
   defp ml({module, _, label}), do: {module, label}
   defp ml(nil), do: nil
   defp remove_fa({module, _, label}), do: {module, nil, label}
+
+  ## preseed
+  # mostly for testing.
+  def preseed(mfa_or_ml, block) do
+    :ets.insert(__MODULE__, {mfa_or_ml, block})
+    :ok
+  end
 
   #############################################################################
   # ROUTER

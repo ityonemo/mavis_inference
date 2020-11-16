@@ -17,10 +17,10 @@ defmodule Type.Inference.Opcodes.Calls do
 
   # disables _module_info.
   opcode {:call_ext_only, _, {:extfunc, :erlang, :get_module_info, _}} do
-    forward(_state, _meta, ...) do
-      {:ok, builtin(:any)}
+    forward(state, _meta, ...) do
+      {:ok, state}
     end
-    
+
     backprop :terminal
   end
 
