@@ -103,19 +103,46 @@ defmodule TypeTest.Abstract.OpcodeTest do
       forward(regs, _meta, ...) do
         {:ok, freeze: regs}
       end
+
+      backprop(regs, _meta, ...) do
+        send(self(), {:bp_freeze, regs.freeze})
+        {:ok, [regs]}
+      end
     end
 
-    opcode :move do
+    opcode :put_reg_0 do
       forward(regs, _meta, ...) do
-        {:ok, put_reg(regs, @x0, :bar)}
+        {:ok, put_reg(regs, {:x, 0}, :bar)}
+      end
+
+      backprop(regs, _meta, ...) do
+        send(self(), :bp_put)
+        {:ok, [regs]}
       end
     end
 
     test "is ignored by the next opcode" do
-      assert %{x: %{0 => :foo}} = [:freeze, :move]
+      assert %{x: %{0 => :foo}, freeze: 0} = [:freeze, :put_reg_0]
       |> Parser.new(preload: %{0 => :foo})
       |> fast_forward(__MODULE__)
       |> history_finish
+    end
+
+    test "the freeze value matches the index of the freeze location" do
+      assert %{x: %{0 => :bar}, freeze: 1} = [:put_reg_0, :freeze]
+      |> Parser.new(preload: %{0 => :foo})
+      |> fast_forward(__MODULE__)
+      |> history_finish
+    end
+
+    test "backpropagation through a frozen opcode" do
+      [:freeze, :put_reg_0]
+      |> Parser.new(preload: %{0 => :foo})
+      |> fast_forward(__MODULE__)
+      |> Parser.do_backprop(__MODULE__)
+
+      refute_received :bp_put
+      assert_received :bp_freeze
     end
   end
 

@@ -153,7 +153,6 @@ defmodule Type.Inference.Block.Parser do
           stack: state.stack,
           histories: [[vm | history]]}
       |> do_backprop(opcode_modules)
-      |> log_backprop
       |> Map.get(:histories)
     end)
   end
@@ -186,6 +185,7 @@ defmodule Type.Inference.Block.Parser do
     # continue to backprop until we run out of stack.
     state
     |> rollback(new_histories)
+    |> log_backprop
     |> do_backprop(opcode_modules)
   end
 
@@ -243,17 +243,17 @@ defmodule Type.Inference.Block.Parser do
       raise "invalid backprop result #{inspect bck}"
     end
 
-    defp log_forward(state = %{meta: %{log: true}}) do
+    def log_forward(state = %{meta: %{log: true}}) do
       IO.puts("forward pass result: #{inspect state}")
       state
     end
-    defp log_forward(state), do: state
+    def log_forward(state), do: state
 
-    defp log_backprop(state = %{meta: %{log: true}}) do
+    def log_backprop(state = %{meta: %{log: true}}) do
       IO.puts("backprop pass result: #{inspect state}")
       state
     end
-    defp log_backprop(state), do: state
+    def log_backprop(state), do: state
 
   else
     defp validate_forward(any, _), do: any

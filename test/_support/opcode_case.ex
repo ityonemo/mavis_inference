@@ -9,6 +9,7 @@ defmodule TypeTest.OpcodeCase do
   def fast_forward(state, module) do
     state
     |> Parser.do_forward(module)
+    |> Parser.log_forward
     |> fast_forward(module)
   end
 

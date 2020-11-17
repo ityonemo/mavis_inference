@@ -53,4 +53,5 @@ defmodule Type.Inference.Opcodes.Misc do
   opcode :timeout, :noop
 
   opcode :remove_message, :noop
+
 end
