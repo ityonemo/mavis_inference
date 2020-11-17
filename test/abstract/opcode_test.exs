@@ -142,7 +142,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
       |> Parser.do_backprop(__MODULE__)
 
       refute_received :bp_put
-      assert_received :bp_freeze
+      assert_received {:bp_freeze, nil}
     end
   end
 
