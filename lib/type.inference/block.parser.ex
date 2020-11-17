@@ -153,7 +153,6 @@ defmodule Type.Inference.Block.Parser do
           stack: state.stack,
           histories: [[vm | history]]}
       |> do_backprop(opcode_modules)
-      |> log_backprop
       |> Map.get(:histories)
     end)
   end
@@ -167,8 +166,12 @@ defmodule Type.Inference.Block.Parser do
   def do_backprop(state = %{stack: [opcode | _]}, opcode_modules) do
     new_histories = state.histories
     |> Enum.flat_map(fn [latest, _to_replace | earlier] ->
+      # take the length of remaining items in the history, to figure out
+      # whether or not we need to un-freeze this history
+      stack_len = length(earlier)
+
       opcode
-      |> reduce_backprop(latest, state.meta, opcode_modules)
+      |> reduce_backprop(latest, state.meta, stack_len, opcode_modules)
       |> validate_backprop  # prevents stupid mistakes
       |> case do
         {:ok, new_starting_points} ->
@@ -186,12 +189,20 @@ defmodule Type.Inference.Block.Parser do
     # continue to backprop until we run out of stack.
     state
     |> rollback(new_histories)
+    |> log_backprop
     |> do_backprop(opcode_modules)
   end
 
-  @spec reduce_backprop(term, Registers.t, map, op_module) ::
+  @spec reduce_backprop(term, Registers.t, map, non_neg_integer, op_module) ::
     {:ok, [Registers.t]} | :noop | :unimplemented | :no_return | :unknown
-  defp reduce_backprop(opcode, latest, meta, opcode_modules) do
+  defp reduce_backprop(_, latest = %{freeze: freeze}, _, stack_len, _)
+      when is_integer(freeze) and freeze != stack_len do
+    {:ok, [latest]}
+  end
+  defp reduce_backprop(opcode, latest = %{freeze: stack_len}, meta, stack_len, opcode_modules) do
+    reduce_backprop(opcode, %{latest | freeze: nil}, meta, stack_len, opcode_modules)
+  end
+  defp reduce_backprop(opcode, latest, meta, _stack_len, opcode_modules) do
     opcode_modules
     |> List.wrap
     |> Enum.reduce(:unknown, fn
@@ -243,17 +254,17 @@ defmodule Type.Inference.Block.Parser do
       raise "invalid backprop result #{inspect bck}"
     end
 
-    defp log_forward(state = %{meta: %{log: true}}) do
+    def log_forward(state = %{meta: %{log: true}}) do
       IO.puts("forward pass result: #{inspect state}")
       state
     end
-    defp log_forward(state), do: state
+    def log_forward(state), do: state
 
-    defp log_backprop(state = %{meta: %{log: true}}) do
+    def log_backprop(state = %{meta: %{log: true}}) do
       IO.puts("backprop pass result: #{inspect state}")
       state
     end
-    defp log_backprop(state), do: state
+    def log_backprop(state), do: state
 
   else
     defp validate_forward(any, _), do: any

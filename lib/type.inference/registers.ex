@@ -24,7 +24,7 @@ defmodule Type.Inference.Registers do
       |> Enum.intersperse([" : "])
       |> Enum.flat_map(&Function.identity/1)
 
-      freeze = if registers.freeze, do: "(frozen)", else: ""
+      freeze = if slot = registers.freeze, do: "(frozen #{slot})", else: ""
 
       concat(["#Reg", freeze, "<"] ++ xreg ++ yreg ++ [">"])
     end
