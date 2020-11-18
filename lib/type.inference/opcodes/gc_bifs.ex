@@ -16,7 +16,7 @@ defmodule Type.Inference.Opcodes.GcBifs do
 
     backprop(regs, _meta, ...) do
       if Type.subtype?(fetch_type(regs, to), builtin(:non_neg_integer)) do
-        {:ok, [put_reg(regs, from, %Type.Bitstring{size: 0, unit: 1})]}
+        {:ok, put_reg(regs, from, %Type.Bitstring{size: 0, unit: 1})}
       else
         {:ok, []}
       end
@@ -38,7 +38,7 @@ defmodule Type.Inference.Opcodes.GcBifs do
 
     backprop(regs, _meta, ...) do
       if Type.subtype?(fetch_type(regs, to), builtin(:non_neg_integer)) do
-        {:ok, [put_reg(regs, from, %Type.Bitstring{size: 0, unit: 1})]}
+        {:ok, put_reg(regs, from, %Type.Bitstring{size: 0, unit: 1})}
       else
         {:ok, []}
       end

@@ -175,7 +175,9 @@ defmodule Type.Inference.Block.Parser do
       |> validate_backprop  # prevents stupid mistakes
       |> case do
         {:ok, new_starting_points} ->
-          Enum.map(new_starting_points, &[&1 | earlier])
+          new_starting_points
+          |> List.wrap
+          |> Enum.map(&[&1 | earlier])
         :noop ->
           [[latest | earlier]]
         :unimplemented ->
@@ -247,6 +249,7 @@ defmodule Type.Inference.Block.Parser do
       raise "invalid forward result #{inspect invalid} when processing opcode #{inspect opcode}"
     end
 
+    defp validate_backprop(bck = {:ok, %Registers{}}), do: bck
     defp validate_backprop(bck = {:ok, []}), do: bck
     defp validate_backprop(bck = {:ok, [%Registers{} | _]}), do: bck
     defp validate_backprop(short) when short in @shortforms, do: short

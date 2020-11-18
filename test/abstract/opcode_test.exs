@@ -106,7 +106,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
 
       backprop(regs, _meta, ...) do
         send(self(), {:bp_freeze, regs.freeze})
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
 
@@ -117,7 +117,7 @@ defmodule TypeTest.Abstract.OpcodeTest do
 
       backprop(regs, _meta, ...) do
         send(self(), :bp_put)
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
 

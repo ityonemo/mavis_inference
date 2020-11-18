@@ -17,7 +17,7 @@ defmodule Type.Inference.Opcodes.Move do
       |> put_reg(from, fetch_type(regs, to))
       |> tombstone(to)
 
-      {:ok, [prev_state]}
+      {:ok, prev_state}
     end
   end
 
@@ -26,7 +26,7 @@ defmodule Type.Inference.Opcodes.Move do
       {:ok, put_reg(regs, to, fetch_type(regs, value))}
     end
     backprop(regs, _meta, ...) do
-      {:ok, [tombstone(regs, to)]}
+      {:ok, tombstone(regs, to)}
     end
   end
 

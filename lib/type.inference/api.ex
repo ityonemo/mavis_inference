@@ -5,12 +5,14 @@ defmodule Type.Engine.Api do
 
   @callback forward(opcode, meta :: map, Registers.t) ::
               {:ok, Registers.t}
+              | {:ok, [Registers.t]}
               | {:freeze, Registers.t}
               | {:backprop, [Registers.t]}
               | :unknown
 
   @callback backprop(opcode, meta :: map, Registers.t) ::
-              {:ok, [Registers.t]}
+              {:ok, Registers.t}
+              | {:ok, [Registers.t]}
               | {:error, term}
               | :unknown
 end

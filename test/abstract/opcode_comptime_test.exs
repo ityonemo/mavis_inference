@@ -37,7 +37,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
       end
       backprop(regs, _meta, ...) do
         IO.puts(a)
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
   end
@@ -61,7 +61,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
       end
       backprop(regs, _meta, ...) do
         IO.puts(a)
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
   end
@@ -85,7 +85,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
         {:ok, regs}
       end
       backprop(regs, _meta, ...) do
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
   end
@@ -109,7 +109,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
         {:ok, regs}
       end
       backprop(regs = %{foo: a}, _meta, ...) do
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
   end
@@ -132,7 +132,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
         {:ok, regs}
       end
       backprop(regs, _meta, ...) do
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
   end
@@ -155,7 +155,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
         {:ok, regs}
       end
       backprop(regs, _meta, ...) do
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
   end
@@ -178,7 +178,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
         {:ok, regs}
       end
       backprop(regs, _meta, ...) when is_defined(regs, a) do
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
   end
@@ -201,7 +201,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
         {:ok, regs}
       end
       backprop(regs, _meta, ...) do
-        {:ok, [regs]}
+        {:ok, regs}
       end
     end
   end

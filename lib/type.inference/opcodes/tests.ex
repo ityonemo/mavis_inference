@@ -358,7 +358,14 @@ defmodule Type.Inference.Opcodes.Tests do
       end
     end
 
-    backprop :terminal
+    backprop(regs, meta, ...) do
+      jump_block = BlockCache.depend_on({meta.module, fail})
+      |> Enum.map(&(&1.needs)
+      |> IO.inspect(label: "364"))
+
+      regs |> IO.inspect(label: "362")
+      raise "foo"
+    end
   end
 
   opcode {:test, :is_lt, {:f, fail}, [left, right]} do
