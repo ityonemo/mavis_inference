@@ -12,9 +12,9 @@ defmodule Type.Inference.Opcodes.Move do
       {:ok, put_reg(regs, to, fetch_type(regs, from))}
     end
 
-    backprop(regs, _meta, ...) do
-      prev_state = regs
-      |> put_reg(from, fetch_type(regs, to))
+    backprop(out_regs, in_regs, _meta, ...) do
+      prev_state = out_regs
+      |> put_reg(from, fetch_type(out_regs, to))
       |> tombstone(to)
 
       {:ok, prev_state}
@@ -25,8 +25,8 @@ defmodule Type.Inference.Opcodes.Move do
     forward(regs, _meta, ...) do
       {:ok, put_reg(regs, to, fetch_type(regs, value))}
     end
-    backprop(regs, _meta, ...) do
-      {:ok, tombstone(regs, to)}
+    backprop(out_regs, in_regs, _meta, ...) do
+      {:ok, tombstone(out_regs, to)}
     end
   end
 

@@ -44,11 +44,11 @@ defmodule TypeTest.Abstract.OpcodeTest do
 
       forward :noop
 
-      backprop(regs, _meta, ...) when is_reg(regs, @x0, :foo) do
+      backprop(out_regs, _in_regs, _meta, ...) when is_reg(out_regs, @x0, :foo) do
         :noop
       end
 
-      backprop(_regs, _meta, ...) do
+      backprop(_out_regs, _in_regs, _meta, ...) do
         :no_return
       end
     end
@@ -104,9 +104,9 @@ defmodule TypeTest.Abstract.OpcodeTest do
         {:ok, freeze: regs}
       end
 
-      backprop(regs, _meta, ...) do
-        send(self(), {:bp_freeze, regs.freeze})
-        {:ok, regs}
+      backprop(_out_regs, in_regs, _meta, ...) do
+        send(self(), {:bp_freeze, in_regs.freeze})
+        {:ok, in_regs}
       end
     end
 
@@ -115,9 +115,9 @@ defmodule TypeTest.Abstract.OpcodeTest do
         {:ok, put_reg(regs, {:x, 0}, :bar)}
       end
 
-      backprop(regs, _meta, ...) do
+      backprop(_out_regs, in_regs, _meta, ...) do
         send(self(), :bp_put)
-        {:ok, regs}
+        {:ok, in_regs}
       end
     end
 

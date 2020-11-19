@@ -7,6 +7,8 @@ end
 
 defmodule Type.Inference.Application.BlockAnalyzer do
 
+  require Logger
+
   alias Type.Inference.Application.BlockCache
   alias Type.Inference.Block.Parser
 
@@ -24,8 +26,11 @@ defmodule Type.Inference.Application.BlockAnalyzer do
   end
 
   defp infer(block_id, code, parser_module) do
+    Logger.debug("performing inference on #{inspect block_id}")
     # broadcast completion of the block when we are done analyzing it.
-    block = parser_module.parse(code, module: elem(block_id, 0))
+    block = parser_module.parse(code,
+      module: elem(block_id, 0),
+      label: elem(block_id, 2))
 
     BlockCache.resolve(block_id, block)
   end

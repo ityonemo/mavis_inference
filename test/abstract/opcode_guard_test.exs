@@ -39,11 +39,11 @@ defmodule TypeTest.Abstract.GuardTest do
         {:ok, regs}
       end
 
-      backprop(regs, _meta, ...) when is_defined(regs, {:x, 0}) do
-        {:ok, [put_reg(regs, {:x, 0}, :defined)]}
+      backprop(out_regs, in_regs, _meta, ...) when is_defined(out_regs, {:x, 0}) do
+        {:ok, [put_reg(out_regs, {:x, 0}, :defined)]}
       end
-      backprop(regs, _meta, ...) do
-        {:ok, [put_reg(regs, {:x, 0}, :undefined)]}
+      backprop(out_regs, in_regs, _meta, ...) do
+        {:ok, [put_reg(out_regs, {:x, 0}, :undefined)]}
       end
     end
 

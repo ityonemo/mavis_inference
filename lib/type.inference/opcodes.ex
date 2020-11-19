@@ -24,11 +24,19 @@ defmodule Type.Inference.Opcodes do
     defstruct @enforce_keys ++ [reg_ast: @blank, meta_ast: @blank, guard_ast: nil]
 
     @type t :: %__MODULE__{
-      type: :forward | :backprop,
+      type: :forward,
       opcode_ast: Macro.t,
       code_ast: Macro.t | :noop | :unimplemented,
       line: pos_integer,
       reg_ast: Macro.t,
+      meta_ast: Macro.t,
+      guard_ast: Macro.t | nil,
+    } | %__MODULE__{
+      type: :backprop,
+      opcode_ast: Macro.t,
+      code_ast: Macro.t | :noop | :unimplemented,
+      line: pos_integer,
+      reg_ast: {Macro.t, Macro.t},
       meta_ast: Macro.t,
       guard_ast: Macro.t | nil,
     }
@@ -155,7 +163,7 @@ defmodule Type.Inference.Opcodes do
         # key macros
         opcode: 2, opcode: 3,
         forward: 4, forward: 3, forward: 1,
-        backprop: 4, backprop: 3, backprop: 1,
+        backprop: 5, backprop: 4, backprop: 1,
         # key helpers
         put_reg: 3, fetch_type: 2, merge_reg: 2, tombstone: 2,
         # guards
@@ -248,8 +256,16 @@ defmodule Type.Inference.Opcodes do
   end
 
   defp rewrite_whens({:when, _meta,
-      [{type, _, [state_ast, meta_ast, {:..., _, _}]}, clauses]}) do
-    quote do unquote(type)(unquote(state_ast), unquote(meta_ast), unquote(clauses)) end
+      [{:forward, _, [regs_ast, meta_ast, {:..., _, _}]}, clauses]}) do
+    quote do
+      forward(unquote(regs_ast), unquote(meta_ast), unquote(clauses))
+    end
+  end
+  defp rewrite_whens({:when, _meta,
+      [{:backprop, _, [out_regs_ast, in_regs_ast, meta_ast, {:..., _, _}]}, clauses]}) do
+    quote do
+      backprop(unquote(out_regs_ast), unquote(in_regs_ast), unquote(meta_ast), unquote(clauses))
+    end
   end
   defp rewrite_whens(code), do: code
 
@@ -274,13 +290,6 @@ defmodule Type.Inference.Opcodes do
       code_ast: code_ast)
   end
 
-  defmacro forward(mode) when mode in [:noop, :unimplemented] do
-    stash(__CALLER__.module,
-      type: :forward,
-      line: __CALLER__.line,
-      code_ast: mode)
-  end
-
   defmacro forward(reg_ast, meta_ast, guards_and_code) do
     {guard, code} = split(guards_and_code)
     stash(__CALLER__.module,
@@ -292,21 +301,28 @@ defmodule Type.Inference.Opcodes do
       guard_ast: guard)
   end
 
-  defmacro backprop(reg_ast, meta_ast, {:..., _, _}, do: code_ast) do
+  defmacro forward(mode) when mode in [:noop, :unimplemented] do
+    stash(__CALLER__.module,
+      type: :forward,
+      line: __CALLER__.line,
+      code_ast: mode)
+  end
+
+  defmacro backprop(out_reg_ast, in_reg_ast, meta_ast, {:..., _, _}, do: code_ast) do
     stash(__CALLER__.module,
       type: :backprop,
-      line: get_line(reg_ast),
-      reg_ast: reg_ast,
+      line: get_line(out_reg_ast),
+      reg_ast: {out_reg_ast, in_reg_ast},
       meta_ast: meta_ast,
       code_ast: code_ast)
   end
 
-  defmacro backprop(reg_ast, meta_ast, guards_and_code) do
+  defmacro backprop(out_reg_ast, in_reg_ast, meta_ast, guards_and_code) do
     {guard, code} = split(guards_and_code)
     stash(__CALLER__.module,
       type: :backprop,
-      line: get_line(reg_ast),
-      reg_ast: reg_ast,
+      line: get_line(out_reg_ast),
+      reg_ast: {out_reg_ast, in_reg_ast},
       meta_ast: meta_ast,
       code_ast: code,
       guard_ast: guard)
@@ -329,7 +345,7 @@ defmodule Type.Inference.Opcodes do
     type: :forward | :backprop,
     line: pos_integer,
     code_ast: Macro.t | :noop | :unimplemented,
-    reg_ast: Macro.t | nil,
+    reg_ast: Macro.t | {Macro.t, Macro.t} | nil,
     meta_ast: Macro.t | nil,
     guard_ast: Macro.t | nil
   ]

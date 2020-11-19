@@ -29,7 +29,9 @@ defmodule Type.Inference.Opcodes.Gets do
       {:ok, new_state}
     end
 
-    backprop :terminal
+    backprop(out_regs, in_regs, _meta, ...) do
+
+    end
   end
 
   opcode {:get_tl, from, to} do

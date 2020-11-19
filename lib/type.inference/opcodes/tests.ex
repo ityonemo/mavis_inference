@@ -1,5 +1,5 @@
 defmodule Type.Inference.Opcodes.Tests do
-  use Type.Inference.Opcodes, debug_dump_code: true
+  use Type.Inference.Opcodes
 
   alias Type.Inference.Application.BlockCache
 
@@ -43,6 +43,11 @@ defmodule Type.Inference.Opcodes.Tests do
     backprop :terminal
   end
 
+  defp put_new_reg(regs = %{x: x_regs}, {:x, reg}, _type)
+      when is_map_key(x_regs, reg), do: regs
+
+  defp put_new_reg(regs, id, type), do: put_reg(regs, id, type)
+
   @opdoc """
   takes the value in register `from` and checks if it's nil.  If it's nil, then proceed
   to the next opcode.  If it's not, then jump to block label `fail`
@@ -54,7 +59,10 @@ defmodule Type.Inference.Opcodes.Tests do
 
       cond do
         not is_defined(regs, from) ->
-          jump_needs = Enum.map(jump_block, &merge_reg(regs, &1.needs))
+          jump_needs = jump_block
+          |> Enum.map(&merge_reg(regs, &1.needs))
+          |> Enum.map(&put_new_reg(&1, from, builtin(:any)))
+
           {:backprop, [put_reg(regs, from, nil) | jump_needs]}
         fetch_type(regs, from) == nil ->
           {:ok, regs}
@@ -64,7 +72,19 @@ defmodule Type.Inference.Opcodes.Tests do
       end
     end
 
-    backprop :terminal
+    backprop(out_regs, in_regs, meta, ...) do
+      raise "foo"
+      #cond do
+      #  fetch_type(regs, from) == nil ->
+      #    {:ok, regs}
+      #  true ->
+      #    jump_block = {meta.module, fail}
+      #    |> BlockCache.depend_on()
+      #    |> block_needs
+#
+      #    {:ok, merge_regs(regs, jump_block)}
+      #end
+    end
   end
 
   opcode {:test, :is_boolean, {:f, fail}, [from]} do
@@ -152,6 +172,7 @@ defmodule Type.Inference.Opcodes.Tests do
   opcode {:test, :is_nonempty_list, {:f, fail}, [from]} do
     forward(regs, meta, ...) do
       jump_block = BlockCache.depend_on({meta.module, fail})
+      |> IO.inspect(label: "174")
 
       cond do
         ! is_defined(regs, from) ->
@@ -160,8 +181,9 @@ defmodule Type.Inference.Opcodes.Tests do
         match?(%Type.List{nonempty: true}, fetch_type(regs, from)) ->
           {:ok, regs}
         true ->
-          [jump_res] = jump_block
-          {:ok, freeze: put_reg(regs, {:x, 0}, jump_res.makes)}
+          {:ok, Enum.map(jump_block, fn block ->
+            {:freeze, put_reg(regs, {:x, 0}, block.makes)}
+          end)}
       end
     end
 
@@ -337,6 +359,26 @@ defmodule Type.Inference.Opcodes.Tests do
     backprop :terminal
   end
 
+  # TODO: move this to a general tool.
+  @spec block_needs(Block.t) :: %{optional(integer) => Type.t}
+  defp block_needs(block) do
+    Enum.reduce(block, %{}, fn blockdef, acc ->
+      type_union_merge_into(blockdef.needs, acc)
+    end)
+  end
+
+  defp type_union_merge_into(src, dst) do
+    Enum.reduce(src, dst, fn
+      {key, val}, acc when is_map_key(acc, key) ->
+        %{dst | key => Type.union(dst[key], val)}
+      {key, val}, acc -> Map.put(acc, key, val)
+    end)
+  end
+
+  defp merge_regs(regs, x_regs) do
+    %{regs | x: type_union_merge_into(regs.x, x_regs)}
+  end
+
   opcode {:test, :is_eq_exact, {:f, fail}, [left, right]} do
     forward(regs, meta, ...) do
       jump_block = BlockCache.depend_on({meta.module, fail})
@@ -358,13 +400,13 @@ defmodule Type.Inference.Opcodes.Tests do
       end
     end
 
-    backprop(regs, meta, ...) do
-      jump_block = BlockCache.depend_on({meta.module, fail})
-      |> Enum.map(&(&1.needs)
-      |> IO.inspect(label: "364"))
-
-      regs |> IO.inspect(label: "362")
+    backprop(out_regs, in_regs, meta, ...) do
       raise "foo"
+#      jump_block = {meta.module, fail}
+#      |> BlockCache.depend_on()
+#      |> block_needs
+#
+#      {:ok, merge_regs(regs, jump_block)}
     end
   end
 

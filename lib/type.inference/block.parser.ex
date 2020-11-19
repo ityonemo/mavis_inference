@@ -40,6 +40,7 @@ defmodule Type.Inference.Block.Parser do
 
     new(code, metadata, regs)
   end
+  @spec new([any], map, any) :: Type.Inference.Block.Parser.t()
   def new(code, meta, regs) do
     %__MODULE__{
       code: code,
@@ -257,17 +258,38 @@ defmodule Type.Inference.Block.Parser do
       raise "invalid backprop result #{inspect bck}"
     end
 
-    def log_forward(state = %{meta: %{log: true}}) do
-      IO.puts("forward pass result: #{inspect state}")
-      state
+    def log_forward(regs = %{meta: %{log: true}}) do
+      IO.puts("forward pass result: #{inspect regs, structs: false}")
+      regs
     end
-    def log_forward(state), do: state
+    def log_forward(regs = %{meta: %{module: module, label: label}}) do
+      case Application.get_env(:mavis_inference, :log) do
+        :all ->
+          IO.puts("forward pass result #{inspect regs, structs: false}")
+        {^module, ^label} ->
+          IO.puts("forward pass result #{inspect regs, structs: false}")
+        _ -> :ok
+      end
 
-    def log_backprop(state = %{meta: %{log: true}}) do
-      IO.puts("backprop pass result: #{inspect state}")
-      state
+      regs
     end
-    def log_backprop(state), do: state
+    def log_forward(regs), do: regs
+
+    def log_backprop(regs = %{meta: %{log: true}}) do
+      IO.puts("backprop pass result: #{inspect regs, structs: false}")
+      regs
+    end
+    def log_backprop(regs = %{meta: %{module: module, label: label}}) do
+      case Application.get_env(:mavis_inference, :log) do
+        :all ->
+          IO.puts("backprop pass result #{inspect regs, structs: false}")
+        {^module, ^label} ->
+          IO.puts("forward pass result #{inspect regs, structs: false}")
+        _ -> :ok
+      end
+      regs
+    end
+    def log_backporp(regs), do: regs
 
   else
     defp validate_forward(any, _), do: any
