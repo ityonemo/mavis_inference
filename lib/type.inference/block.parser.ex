@@ -166,13 +166,13 @@ defmodule Type.Inference.Block.Parser do
   end
   def do_backprop(state = %{stack: [opcode | _]}, opcode_modules) do
     new_histories = state.histories
-    |> Enum.flat_map(fn [latest, _to_replace | earlier] ->
+    |> Enum.flat_map(fn [out_regs, in_regs | earlier] ->
       # take the length of remaining items in the history, to figure out
       # whether or not we need to un-freeze this history
       stack_len = length(earlier)
 
       opcode
-      |> reduce_backprop(latest, state.meta, stack_len, opcode_modules)
+      |> reduce_backprop({out_regs, in_regs}, state.meta, stack_len, opcode_modules)
       |> validate_backprop  # prevents stupid mistakes
       |> case do
         {:ok, new_starting_points} ->
@@ -180,10 +180,10 @@ defmodule Type.Inference.Block.Parser do
           |> List.wrap
           |> Enum.map(&[&1 | earlier])
         :noop ->
-          [[latest | earlier]]
+          [[in_regs | earlier]]
         :unimplemented ->
           IO.warn("backprop mode for the opcode #{inspect opcode} is not implemented yet.", [])
-          [[latest | earlier]]
+          [[in_regs | earlier]]
         :no_return -> []
         :unknown ->
           raise Type.UnknownOpcodeError, opcode: opcode
@@ -196,14 +196,12 @@ defmodule Type.Inference.Block.Parser do
     |> do_backprop(opcode_modules)
   end
 
-  @spec reduce_backprop(term, Registers.t, map, non_neg_integer, op_module) ::
-    {:ok, [Registers.t]} | :noop | :unimplemented | :no_return | :unknown
-  defp reduce_backprop(_, latest = %{freeze: freeze}, _, stack_len, _)
+  @spec reduce_backprop(term, {Registers.t, Registers.t}, map, non_neg_integer, op_module) ::
+    {:ok, [Registers.t]} | {:ok, Registers.t} |
+    :noop | :unimplemented | :no_return | :unknown
+  defp reduce_backprop(_, {%{freeze: freeze}, in_regs}, _, stack_len, _)
       when is_integer(freeze) and freeze != stack_len do
-    {:ok, [latest]}
-  end
-  defp reduce_backprop(opcode, latest = %{freeze: stack_len}, meta, stack_len, opcode_modules) do
-    reduce_backprop(opcode, %{latest | freeze: nil}, meta, stack_len, opcode_modules)
+    {:ok, in_regs}
   end
   defp reduce_backprop(opcode, latest, meta, _stack_len, opcode_modules) do
     opcode_modules
@@ -275,11 +273,11 @@ defmodule Type.Inference.Block.Parser do
     end
     def log_forward(regs), do: regs
 
-    def log_backprop(regs = %{meta: %{log: true}}) do
+    def log_backprop({regs = %{meta: %{log: true}}, _}) do
       IO.puts("backprop pass result: #{inspect regs, structs: false}")
       regs
     end
-    def log_backprop(regs = %{meta: %{module: module, label: label}}) do
+    def log_backprop({regs = %{meta: %{module: module, label: label}}, _}) do
       case Application.get_env(:mavis_inference, :log) do
         :all ->
           IO.puts("backprop pass result #{inspect regs, structs: false}")
@@ -289,7 +287,7 @@ defmodule Type.Inference.Block.Parser do
       end
       regs
     end
-    def log_backporp(regs), do: regs
+    def log_backprop(regs), do: regs
 
   else
     defp validate_forward(any, _), do: any
