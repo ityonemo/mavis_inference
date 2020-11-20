@@ -173,7 +173,7 @@ defmodule Type.Inference.Block.Parser do
 
       opcode
       |> reduce_backprop({out_regs, in_regs}, state.meta, stack_len, opcode_modules)
-      |> validate_backprop  # prevents stupid mistakes
+      |> validate_backprop(opcode)  # prevents stupid mistakes
       |> case do
         {:ok, new_starting_points} ->
           new_starting_points
@@ -248,12 +248,12 @@ defmodule Type.Inference.Block.Parser do
       raise "invalid forward result #{inspect invalid} when processing opcode #{inspect opcode}"
     end
 
-    defp validate_backprop(bck = {:ok, %Registers{}}), do: bck
-    defp validate_backprop(bck = {:ok, []}), do: bck
-    defp validate_backprop(bck = {:ok, [%Registers{} | _]}), do: bck
-    defp validate_backprop(short) when short in @shortforms, do: short
-    defp validate_backprop(bck) do
-      raise "invalid backprop result #{inspect bck}"
+    defp validate_backprop(bck = {:ok, %Registers{}}, _), do: bck
+    defp validate_backprop(bck = {:ok, []}, _), do: bck
+    defp validate_backprop(bck = {:ok, [%Registers{} | _]}, _), do: bck
+    defp validate_backprop(short, _) when short in @shortforms, do: short
+    defp validate_backprop(bck, opcode) do
+      raise "invalid backprop result #{inspect bck} when processing opcode #{inspect opcode}"
     end
 
     def log_forward(regs = %{meta: %{log: true}}) do
