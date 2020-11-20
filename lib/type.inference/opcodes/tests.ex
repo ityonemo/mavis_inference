@@ -67,13 +67,15 @@ defmodule Type.Inference.Opcodes.Tests do
         get_reg(regs, from) == nil ->
           {:ok, regs}
         true ->
-          [jump_res] = jump_block
-          {:ok, freeze: put_reg(regs, {:x, 0}, jump_res.makes)}
+          freezes = Enum.map(jump_block, fn block_result ->
+            {:freeze, put_reg(regs, zero_reg(), block_result.makes)}
+          end)
+          {:ok, freezes}
       end
     end
 
     backprop(out_regs, in_regs, meta, ...) do
-      raise "foo"
+      raise "abc"
       #cond do
       #  get_reg(regs, from) == nil ->
       #    {:ok, regs}

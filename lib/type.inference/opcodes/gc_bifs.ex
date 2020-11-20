@@ -56,8 +56,7 @@ defmodule Type.Inference.Opcodes.GcBifs do
     end
 
     backprop(out_regs, in_regs, _meta, ...) do
-      IO.puts("hi dad")
-      raise "foo"
+      raise "qqz"
     #  if Type.subtype?(get_reg(regs, to), builtin(:non_neg_integer)) do
     #    {:ok, put_reg(regs, from, %Type.Bitstring{size: 0, unit: 1})}
     #  else

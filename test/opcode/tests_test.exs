@@ -22,6 +22,15 @@ defmodule TypeTest.Opcode.TestsTest do
       needs: %{0 => builtin(:integer)},
       makes: builtin(:float)
     }])
+
+    # also preseed a value that can have multiple choices
+    BlockCache.preseed({__MODULE__, 99}, [%Block{
+      needs: %{0 => builtin(:integer)},
+      makes: builtin(:float)
+    }, %Block{
+      needs: %{0 => builtin(:atom)},
+      makes: :foo
+    }])
     :ok
   end
 
@@ -138,7 +147,7 @@ defmodule TypeTest.Opcode.TestsTest do
 
     test "forwards when the jump has multiple conditions"
 
-    test "backpropagates when there's nothing in the test register" do
+    test "triggers backprop when there's nothing in the test register" do
       state = @op_is_nil_all
       |> Parser.new(module: __MODULE__)
       |> fast_forward
@@ -151,6 +160,16 @@ defmodule TypeTest.Opcode.TestsTest do
     end
 
     test "passes needs through a backpropagation"
+
+    @op_is_nil_bifurc {:test, :is_nil, {:f, 99}, [x: 0]}
+    test "performs a backpropagation" do
+      state = [@op_is_nil_bifurc]
+      |> Parser.new(module: __MODULE__)
+      |> Parser.do_forward |> IO.inspect(label: "168")
+      |> change_final(0, :foo)
+      |> change_final(1, :foo)
+      |> IO.inspect(label: "159")
+    end
   end
 
   describe "is_boolean opcode" do

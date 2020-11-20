@@ -48,6 +48,15 @@ defmodule Type.Inference.Block do
     {:error, "invalid typespec"}
   end
 
+  alias Type.Inference.Register
+  @spec eval(t, Registers.t)
+  @doc """
+  evaluates a type given a register
+  """
+  def eval(t, type_map) do
+    t |> IO.inspect(label: "57")
+  end
+
   defp get_params(%{needs: needs}) when needs == %{}, do: []
   defp get_params(block) do
     max_key = block.needs

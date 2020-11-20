@@ -166,6 +166,8 @@ defmodule Type.Inference.Opcodes do
         backprop: 5, backprop: 4, backprop: 1,
         # key helpers
         put_reg: 3, get_reg: 2, merge_reg: 2, tombstone: 2,
+        # other helpers
+        zero_reg: 0,
         # guards
         is_defined: 2, is_reg: 3, is_reg_in: 3]
 
@@ -435,4 +437,7 @@ defmodule Type.Inference.Opcodes do
   def tombstone(regs, register) do
     %{regs | x: Map.delete(regs.x, register)}
   end
+
+  # this register is special
+  def zero_reg, do: {:x, 0}
 end
