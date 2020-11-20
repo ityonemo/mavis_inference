@@ -230,9 +230,9 @@ defmodule TypeTest.Abstract.ComptimeTest do
 
       forward(regs, _meta, ...) do
         cond do
-          match?(%Type.List{nonempty: true}, fetch_type(regs, from)) ->
+          match?(%Type.List{nonempty: true}, get_reg(regs, from)) ->
             {:ok, put_reg(regs, to, builtin(:pos_integer))}
-          match?(%Type.List{}, fetch_type(regs, from)) ->
+          match?(%Type.List{}, get_reg(regs, from)) ->
             {:ok, put_reg(regs, to, builtin(:non_neg_integer))}
         end
       end

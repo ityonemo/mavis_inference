@@ -165,7 +165,7 @@ defmodule Type.Inference.Opcodes do
         forward: 4, forward: 3, forward: 1,
         backprop: 5, backprop: 4, backprop: 1,
         # key helpers
-        put_reg: 3, fetch_type: 2, merge_reg: 2, tombstone: 2,
+        put_reg: 3, get_reg: 2, merge_reg: 2, tombstone: 2,
         # guards
         is_defined: 2, is_reg: 3, is_reg_in: 3]
 
@@ -420,19 +420,19 @@ defmodule Type.Inference.Opcodes do
     end
   end
 
-  def fetch_type(state, {:x, reg}), do: state.x[reg]
-  def fetch_type(state, {:y, reg}), do: state.y[reg]
-  def fetch_type(_state, nil), do: []
-  def fetch_type(_state, {_, value}), do: Type.of(value)
+  def get_reg(regs, {:x, reg}), do: regs.x[reg]
+  def get_reg(regs, {:y, reg}), do: regs.y[reg]
+  def get_reg(_regs, nil), do: []
+  def get_reg(_regs, {_, value}), do: Type.of(value)
 
-  def put_reg(state, {class, reg}, type) do
-    %{state | class => Map.put(state.x, reg, type)}
+  def put_reg(regs, {class, reg}, type) do
+    %{regs | class => Map.put(regs.x, reg, type)}
   end
 
-  def merge_reg(state, registers) do
-    %{state | x: Map.merge(state.x, registers)}
+  def merge_reg(regs, registers) do
+    %{regs | x: Map.merge(regs.x, registers)}
   end
-  def tombstone(state, register) do
-    %{state | x: Map.delete(state.x, register)}
+  def tombstone(regs, register) do
+    %{regs | x: Map.delete(regs.x, register)}
   end
 end

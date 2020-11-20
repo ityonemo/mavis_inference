@@ -91,8 +91,8 @@ defmodule TypeTest.Abstract.OpcodeTest do
       |> Parser.new()
       |> fast_forward(__MODULE__)
 
-      assert %{0 => :foo, 1 => :foo} = history_finish(result, 0).x
-      assert %{0 => :foo, 1 => :bar} = history_finish(result, 1).x
+      assert %{0 => :foo, 1 => :foo} = history_final(result, 0).x
+      assert %{0 => :foo, 1 => :bar} = history_final(result, 1).x
 
       assert 2 == length(result.histories)
     end
@@ -125,14 +125,14 @@ defmodule TypeTest.Abstract.OpcodeTest do
       assert %{x: %{0 => :foo}, freeze: 0} = [:freeze, :put_reg_0]
       |> Parser.new(preload: %{0 => :foo})
       |> fast_forward(__MODULE__)
-      |> history_finish
+      |> history_final
     end
 
     test "the freeze value matches the index of the freeze location" do
       assert %{x: %{0 => :bar}, freeze: 1} = [:put_reg_0, :freeze]
       |> Parser.new(preload: %{0 => :foo})
       |> fast_forward(__MODULE__)
-      |> history_finish
+      |> history_final
     end
 
     test "backpropagation through a frozen opcode" do
@@ -158,8 +158,8 @@ defmodule TypeTest.Abstract.OpcodeTest do
       |> Parser.new(preload: %{0 => builtin(:any)})
       |> Parser.do_forward(__MODULE__)
 
-      assert %{1 => :foo} = history_finish(result, 0).x
-      assert %{1 => :bar} = history_finish(result, 1).x
+      assert %{1 => :foo} = history_final(result, 0).x
+      assert %{1 => :bar} = history_final(result, 1).x
     end
   end
 

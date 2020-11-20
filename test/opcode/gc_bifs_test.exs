@@ -14,8 +14,9 @@ defmodule TypeTest.Opcode.GcBifsTest do
 
   describe "when the opcode is the bit_size bif" do
     @bitstring %Type.Bitstring{size: 0, unit: 1}
-
     @op_bit_sz {:gc_bif, :bit_size, {:f, 0}, 1, [x: 1], {:x, 0}}
+
+    def bitstring(size), do: %Type.Bitstring{size: size, unit: 0}
 
     test "forward propagates returns non_neg_integer" do
       state = Parser.new([@op_bit_sz], preload: %{1 => @bitstring})
@@ -28,20 +29,104 @@ defmodule TypeTest.Opcode.GcBifsTest do
       ] = history
     end
 
-    test "forward propagates a fixed number if the size is fixed"
+    test "forward propagates a fixed number if the size is fixed" do
+      history = [@op_bit_sz]
+      |> Parser.new(preload: %{1 => %Type.Bitstring{size: 8, unit: 0}})
+      |> Parser.do_forward
 
-    test "backpropagates to require a value in register 1" do
-      state = Parser.new([@op_bit_sz])
+      assert %{0 => 8} = history_final(history).x
+    end
 
-      assert %Parser{histories: [history]} = Parser.do_forward(state)
+    test "forward propagates a multiple numbers if it's not" do
+      bs_union = Type.union(for i <- 1..3, do: %Type.Bitstring{size: i})
 
-      assert [
-        %Registers{x: %{0 => builtin(:non_neg_integer), 1 => @bitstring}},
-        %Registers{x: %{1 => @bitstring}}
-      ] = history
+      history = [@op_bit_sz]
+      |> Parser.new(preload: %{1 => bs_union})
+      |> Parser.do_forward
+
+      assert %{0 => 1..3} = history_final(history).x
+
+      history = [@op_bit_sz]
+      |> Parser.new(preload: %{1 => %Type.Bitstring{size: 8, unit: 8}})
+      |> Parser.do_forward
+
+      assert %{0 => builtin(:pos_integer)} = history_final(history).x
+    end
+
+    test "triggers a backpropagation if no value in target register" do
+      history = [@op_bit_sz]
+      |> Parser.new
+      |> Parser.do_forward
+
+      %{1 => @bitstring} = history_start(history).x
+      %{0 => builtin(:non_neg_integer), 1 => @bitstring} = history_final(history).x
     end
 
     test "errors if incompatible datatypes are provided"
+
+    test "backpropagates correctly if the return type has a single integer" do
+      history = [@op_bit_sz]
+      |> Parser.new
+      |> Parser.do_forward
+      |> change_final(0, 0)
+      |> Parser.do_backprop
+
+      assert %{1 => %Type.Bitstring{size: 0, unit: 0}} = history_start(history).x
+
+      history = [@op_bit_sz]
+      |> Parser.new
+      |> Parser.do_forward
+      |> change_final(0, 16)
+      |> Parser.do_backprop
+
+      assert %{1 => %Type.Bitstring{size: 16, unit: 0}} = history_start(history).x
+    end
+
+    test "backpropagates correctly with groups of integers" do
+      history = [@op_bit_sz]
+      |> Parser.new
+      |> Parser.do_forward
+      |> Parser.do_backprop
+
+      assert %{1 => %Type.Bitstring{size: 0, unit: 1}} = history_start(history).x
+
+      history = [@op_bit_sz]
+      |> Parser.new
+      |> Parser.do_forward
+      |> change_final(0, builtin(:pos_integer))
+      |> Parser.do_backprop
+
+      assert %{1 => %Type.Bitstring{size: 1, unit: 1}} = history_start(history).x
+
+      history = [@op_bit_sz]
+      |> Parser.new
+      |> Parser.do_forward
+      |> change_final(0, builtin(:non_neg_integer))
+      |> Parser.do_backprop
+
+      assert %{1 => @bitstring} = history_start(history).x
+
+
+      history = [@op_bit_sz]
+      |> Parser.new
+      |> Parser.do_forward
+      |> change_final(0, Type.union(0, 8))
+      |> Parser.do_backprop
+
+      allowed_bitstrings = Type.union(bitstring(0), bitstring(8))
+
+      assert %{1 => ^allowed_bitstrings} = history_start(history).x
+
+      history = [@op_bit_sz]
+      |> Parser.new
+      |> Parser.do_forward
+      |> change_final(0, 1..4)
+      |> Parser.do_backprop
+
+      allowed_bitstrings = Type.union(for i <- 1..4, do: bitstring(i))
+
+      assert %{1 => ^allowed_bitstrings} = history_start(history).x
+    end
   end
 
   describe "when the opcode is the byte_size bif" do
@@ -83,21 +168,21 @@ defmodule TypeTest.Opcode.GcBifsTest do
       assert %{x: %{0 => 0}} = [@op_len]
       |> Parser.new(preload: %{1 => []})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "forward propagates arbitrary list returns non_neg_integer" do
       assert %{x: %{0 => builtin(:non_neg_integer)}} = [@op_len]
       |> Parser.new(preload: %{1 => %Type.List{}})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "forward propagates nonempty list returns non_neg_integer" do
       assert %{x: %{0 => builtin(:pos_integer)}} = [@op_len]
       |> Parser.new(preload: %{1 => %Type.List{nonempty: true}})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "backpropagates to require a value in register 1" do
@@ -106,7 +191,7 @@ defmodule TypeTest.Opcode.GcBifsTest do
       |> Parser.do_forward
 
       assert %{1 => %Type.List{}} = history_start(state).x
-      assert %{0 => builtin(:non_neg_integer)} = history_finish(state).x
+      assert %{0 => builtin(:non_neg_integer)} = history_final(state).x
     end
 
     test "overbroad finals"
@@ -122,7 +207,7 @@ defmodule TypeTest.Opcode.GcBifsTest do
       assert %{x: %{0 => builtin(:non_neg_integer)}} = [@op_map_sz]
       |> Parser.new(preload: %{1 => @any_map})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "forward propagates a fixed number if there are only required keys"
@@ -133,7 +218,7 @@ defmodule TypeTest.Opcode.GcBifsTest do
       |> Parser.do_forward
 
       assert %{1 => @any_map} = history_start(state).x
-      assert %{0 => builtin(:non_neg_integer)} = history_finish(state).x
+      assert %{0 => builtin(:non_neg_integer)} = history_final(state).x
     end
 
     test "errors if incompatible datatypes are provided"
@@ -234,8 +319,7 @@ defmodule TypeTest.Opcode.GcBifsTest do
     test "a lambda with chained code" do
       state = [@opcode_bitsz2, @opcode_add]
       |> Parser.new
-      |> Parser.do_forward
-      |> Parser.do_forward
+      |> fast_forward
 
       # there is a pos integer, bitstring -> pos_integer story.
       assert Enum.any?(state.histories, &match?(

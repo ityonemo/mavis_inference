@@ -232,7 +232,7 @@ defmodule TypeTest.Opcode.MoveTest do
       assert %{x: %{0 => builtin(:atom), 1 => builtin(:integer)}} = [@op_swp]
       |> Parser.new(preload: %{0 => builtin(:integer), 1 => builtin(:atom)})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "backpropagates to require a value in register 0" do
@@ -241,7 +241,7 @@ defmodule TypeTest.Opcode.MoveTest do
       |> Parser.do_forward
 
       assert %{0 => builtin(:any), 1 => builtin(:atom)} = history_start(state).x
-      assert %{0 => builtin(:atom), 1 => builtin(:any)} = history_finish(state).x
+      assert %{0 => builtin(:atom), 1 => builtin(:any)} = history_final(state).x
     end
 
     test "backpropagates to require both values" do
@@ -250,7 +250,7 @@ defmodule TypeTest.Opcode.MoveTest do
       |> Parser.do_forward
 
       assert %{0 => builtin(:any), 1 => builtin(:any)} = history_start(state).x
-      assert %{0 => builtin(:any), 1 => builtin(:any)} = history_finish(state).x
+      assert %{0 => builtin(:any), 1 => builtin(:any)} = history_final(state).x
     end
 
     test "backpropagates with a swapping operation"

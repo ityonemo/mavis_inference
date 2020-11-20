@@ -20,11 +20,24 @@ defmodule TypeTest.OpcodeCase do
     |> List.last
   end
 
-  @spec history_finish(Parser.t, non_neg_integer) :: Registers.t
-  def history_finish(state, index \\ 0) do
+  @spec history_final(Parser.t, non_neg_integer) :: Registers.t
+  def history_final(state, index \\ 0) do
     state.histories
     |> Enum.at(index)
     |> List.first
+  end
+
+  @spec change_final(Parser.t, non_neg_integer, Type.t, non_neg_integer) :: Parser.t
+  def change_final(state, register, type, index \\ 0) do
+    new_histories = state.histories
+    |> Enum.with_index
+    |> Enum.map(fn
+      {[latest | rest], ^index} ->
+        [%{latest | x: Map.put(latest.x, register, type)} | rest]
+      {history, _} -> history
+    end)
+
+    %{state | histories: new_histories}
   end
 
 end

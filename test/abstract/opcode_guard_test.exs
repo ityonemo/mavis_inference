@@ -22,14 +22,14 @@ defmodule TypeTest.Abstract.GuardTest do
       assert %{x: %{0 => :defined}} = [:fwd_guard]
       |> Parser.new(preload: %{0 => :foo})
       |> Parser.do_forward(__MODULE__)
-      |> history_finish
+      |> history_final
     end
 
     test "falls through second condition" do
       assert %{x: %{0 => :not_defined}} = [:fwd_guard]
       |> Parser.new
       |> Parser.do_forward(__MODULE__)
-      |> history_finish
+      |> history_final
     end
   end
 
@@ -75,14 +75,14 @@ defmodule TypeTest.Abstract.GuardTest do
       assert %{x: %{0 => :code_1}} = [:code_1]
       |> Parser.new
       |> Parser.do_forward(__MODULE__)
-      |> history_finish
+      |> history_final
     end
 
     test "can use the other opcode" do
       assert %{x: %{0 => :code_2}} = [:code_2]
       |> Parser.new
       |> Parser.do_forward(__MODULE__)
-      |> history_finish
+      |> history_final
     end
   end
 
@@ -95,7 +95,7 @@ defmodule TypeTest.Abstract.GuardTest do
 
     opcode {:both_guard, lit} do
       forward(regs, _meta, ...) do
-        {:ok, put_reg(regs, {:x, 0}, fetch_type(regs, lit))}
+        {:ok, put_reg(regs, {:x, 0}, get_reg(regs, lit))}
       end
     end
 
@@ -103,14 +103,14 @@ defmodule TypeTest.Abstract.GuardTest do
       assert %{x: %{1 => :foo}} = [{:both_guard, {:x, 1}}]
       |> Parser.new(preload: %{1 => :bar})
       |> Parser.do_forward(__MODULE__)
-      |> history_finish
+      |> history_final
     end
 
     test "performs the second case correctly" do
       assert %{x: %{0 => :bar}} = [{:both_guard, {:atom, :bar}}]
       |> Parser.new
       |> Parser.do_forward(__MODULE__)
-      |> history_finish
+      |> history_final
     end
   end
 end

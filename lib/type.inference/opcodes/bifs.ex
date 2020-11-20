@@ -17,20 +17,20 @@ defmodule Type.Inference.Opcodes.Bifs do
     end
 
     forward(regs, _meta, ...) when not is_defined(regs, map) do
-      key_type = fetch_type(regs, key)
+      key_type = get_reg(regs, key)
       map_type = %Type.Map{optional: %{key_type => builtin(:any)}}
       {:backprop, [put_reg(regs, map, map_type)]}
     end
 
     forward(regs, _meta, ...) when not is_defined(regs, key) do
-      map_type = fetch_type(regs, map)
+      map_type = get_reg(regs, map)
       key_type = Type.Map.preimage(map_type)
       {:backprop, [put_reg(regs, key, key_type)]}
     end
 
     forward(regs, _meta, ...) do
-      key_type = fetch_type(regs, key)
-      map_type = fetch_type(regs, map)
+      key_type = get_reg(regs, key)
+      map_type = get_reg(regs, map)
       res_type = Type.Map.apply(map_type, key_type)
       {:ok, put_reg(regs, dest, res_type)}
     end
@@ -83,7 +83,7 @@ defmodule Type.Inference.Opcodes.Bifs do
     end
 
     forward(regs, _meta, ...) when not is_defined(regs, index) do
-      case fetch_type(regs, tuple).elements do
+      case get_reg(regs, tuple).elements do
         lst when is_list(lst) ->
           {:backprop, [put_reg(regs, index, 0..(length(lst) - 1))]}
         {:min, 0} ->
@@ -93,11 +93,11 @@ defmodule Type.Inference.Opcodes.Bifs do
     end
 
     forward(regs, _meta, ...) do
-      if is_integer(fetch_type(regs, index)) do
-        {:ok, put_reg(regs, dest, type_at(fetch_type(regs, tuple), fetch_type(regs, index)))}
+      if is_integer(get_reg(regs, index)) do
+        {:ok, put_reg(regs, dest, type_at(get_reg(regs, tuple), get_reg(regs, index)))}
       else
         # be better about this!
-        {:ok, put_reg(regs, dest, tuple_el_union(fetch_type(regs, tuple)))}
+        {:ok, put_reg(regs, dest, tuple_el_union(get_reg(regs, tuple)))}
       end
     end
 
@@ -131,10 +131,10 @@ defmodule Type.Inference.Opcodes.Bifs do
     end
 
     forward(regs, _meta, ...) do
-      if match?(%Type.Tuple{elements: {:min, 0}}, fetch_type(regs, from)) do
+      if match?(%Type.Tuple{elements: {:min, 0}}, get_reg(regs, from)) do
         {:ok, put_reg(regs, to, builtin(:non_neg_integer))}
       else
-        {:ok, put_reg(regs, to, length(fetch_type(regs, from).elements))}
+        {:ok, put_reg(regs, to, length(get_reg(regs, from).elements))}
       end
     end
 

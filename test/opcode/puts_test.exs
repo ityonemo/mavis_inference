@@ -23,7 +23,7 @@ defmodule TypeTest.Opcode.PutsTest do
       |> fast_forward
 
       assert %Registers{x: %{1 =>
-        %Type.List{type: builtin(:integer), nonempty: true}}} = history_finish(state)
+        %Type.List{type: builtin(:integer), nonempty: true}}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -39,7 +39,7 @@ defmodule TypeTest.Opcode.PutsTest do
 
       assert %Registers{x: %{0 => builtin(:any)}} = history_start(state)
       assert %Registers{x: %{1 =>
-        %Type.List{type: builtin(:any), nonempty: true}}} = history_finish(state)
+        %Type.List{type: builtin(:any), nonempty: true}}} = history_final(state)
     end
 
     test "passes needs through a backpropagation"
@@ -54,7 +54,7 @@ defmodule TypeTest.Opcode.PutsTest do
       |> fast_forward
 
       assert %Registers{x: %{1 =>
-        %Type.List{type: builtin(:integer), nonempty: true}}} = history_finish(state)
+        %Type.List{type: builtin(:integer), nonempty: true}}} = history_final(state)
     end
 
     test "forwards to stitch together an improper list" do
@@ -64,7 +64,7 @@ defmodule TypeTest.Opcode.PutsTest do
 
       assert %Registers{x: %{1 =>
         %Type.List{type: builtin(:integer), nonempty: true, final: builtin(:integer)}}}
-        = history_finish(state)
+        = history_final(state)
     end
 
     test "traps list types to make correct lists" do
@@ -74,7 +74,7 @@ defmodule TypeTest.Opcode.PutsTest do
 
       assert %Registers{x: %{1 =>
         %Type.List{type: builtin(:number), nonempty: true}}}
-        = history_finish(state)
+        = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -90,7 +90,7 @@ defmodule TypeTest.Opcode.PutsTest do
 
       assert %Registers{x: %{0 => builtin(:any), 1 => builtin(:any)}} = history_start(state)
       assert %Registers{x: %{1 =>
-        %Type.List{type: builtin(:any), nonempty: true, final: builtin(:any)}}} = history_finish(state)
+        %Type.List{type: builtin(:any), nonempty: true, final: builtin(:any)}}} = history_final(state)
     end
 
     test "passes needs through a backpropagation"
@@ -105,7 +105,7 @@ defmodule TypeTest.Opcode.PutsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 =>
-        %Type.Tuple{elements: [:foo, builtin(:integer)]}}} = history_finish(state)
+        %Type.Tuple{elements: [:foo, builtin(:integer)]}}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -121,7 +121,7 @@ defmodule TypeTest.Opcode.PutsTest do
 
       assert %Registers{x: %{0 => builtin(:any)}} = history_start(state)
       assert %Registers{x: %{0 =>
-        %Type.Tuple{elements: [:foo, builtin(:any)]}}} = history_finish(state)
+        %Type.Tuple{elements: [:foo, builtin(:any)]}}} = history_final(state)
     end
 
     test "passes needs through a backpropagation"
