@@ -131,7 +131,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
       forward(regs, _meta, ...) do
         {:ok, regs}
       end
-      backprop(out_regs, _meta, ...) do
+      backprop(out_regs, _in_regs, _meta, ...) do
         {:ok, out_regs}
       end
     end
@@ -154,7 +154,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
       forward(regs, _meta, ...) when is_defined(regs, a) do
         {:ok, regs}
       end
-      backprop(out_regs, _meta, ...) do
+      backprop(out_regs, _in_regs, _meta, ...) do
         {:ok, out_regs}
       end
     end
@@ -200,7 +200,7 @@ defmodule TypeTest.Abstract.ComptimeTest do
       forward(regs, _meta, ...) do
         {:ok, regs}
       end
-      backprop(out_regs, in_regs, _meta, ...) do
+      backprop(out_regs, _in_regs, _meta, ...) do
         {:ok, out_regs}
       end
     end
