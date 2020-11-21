@@ -51,50 +51,28 @@ defmodule Type.Inference.Block do
   alias Type.Inference.Registers
   @spec eval(t, Registers.t) :: Type.t
   @doc """
-  evaluates a type given a register
+  evaluates a block set given a set of registers
   """
   def eval(block, regs) do
-    transpose_needs(block)
-    |> Enum.map(fn {reg, block_types} ->
-      {:ok, reg_type} = Map.fetch(regs.x, reg)
-
-      reg_type
-      |> Type.partition(block_types)
-      |> Enum.map(&(&1 != builtin(:none)))
-      |> Enum.all?
+    Enum.map(block, fn block_seg ->
+      if satisfied_by?(block_seg, regs) do
+        block_seg.makes
+      else
+        builtin(:none)
+      end
     end)
-    |> Enum.with_index
-    |> Enum.flat_map(fn
-      {false, _index} -> []
-      {true, index} -> [Enum.at(block, index).makes]
-    end)
+    |> Enum.reject(&(&1 == builtin(:none)))
     |> Type.union
   end
 
-  @spec transpose_needs(t) :: %{optional(non_neg_integer) => [Type.t]}
-  @doc false
-  # this function is a private function, made public only for testing
-  # purposes.
-  #
-  # takes a "needs" definition and converts it into a map of registers
-  # + list of types.  Each "needs" type list is a partitioning set; and
-  # so each register value must have the same list length across all.
-  #
-  # In the future, this may get converted to the main representation
-  # for the block spec.
-  def transpose_needs(block) do
-    block
-    |> Enum.with_index
-    |> Enum.reduce(%{}, fn {block_seg, index}, needs ->
-      # transform a list of needs into a needs of lists
-      block_seg.needs
-      |> Enum.reduce(%{}, fn {reg, type}, acc ->
-        if is_map_key(acc, reg) or index == 0 do
-          Map.put(acc, reg, [type | List.wrap(needs[reg])])
-        else
-          Map.put(acc, reg, List.duplicate(builtin(:any), index))
+  defp satisfied_by?(segment, %{x: x_regs}) do
+    Enum.all?(segment.needs, fn
+      {reg, _} when not is_map_key(x_regs, reg) -> false
+      {reg, seg_type} ->
+        case Type.usable_as(x_regs[reg], seg_type) do
+          {:error, _} -> false
+          _ -> true
         end
-      end)
     end)
   end
 

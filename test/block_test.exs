@@ -21,14 +21,13 @@ defmodule TypeTest.BlockTest do
 
       assert :foo = Block.eval(block, reg)
     end
-  end
 
-  describe "the Block.transpose_needs/1 helper function" do
-    test "correctly transposes the a single block" do
-      assert %{0 => [builtin(:integer)]} =
-        Block.transpose_needs([
-          %Block{needs: %{0 => builtin(:integer)}, makes: :foo}
-        ])
+    test "can evaluate a two-arity block with one option" do
+      block = [%Block{needs: %{0 => builtin(:integer)}, makes: :foo},
+               %Block{needs: %{0 => builtin(:atom)}, makes: :bar}]
+
+      assert :foo = Block.eval(block, %Registers{x: %{0 => 1..47}})
+      assert :bar = Block.eval(block, %Registers{x: %{0 => :quux}})
     end
   end
 end
