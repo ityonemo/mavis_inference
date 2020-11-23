@@ -35,9 +35,9 @@ defmodule TypeTest.Abstract.ComptimeTest do
       forward(regs, _meta, ...) do
         {:ok, regs}
       end
-      backprop(regs, _meta, ...) do
+      backprop(out_regs, _in_regs, _meta, ...) do
         IO.puts(a)
-        {:ok, regs}
+        {:ok, out_regs}
       end
     end
   end
@@ -59,9 +59,9 @@ defmodule TypeTest.Abstract.ComptimeTest do
       forward(regs = %{foo: a}, _meta, ...) do
         {:ok, regs}
       end
-      backprop(regs, _meta, ...) do
+      backprop(out_regs, _in_regs, _meta, ...) do
         IO.puts(a)
-        {:ok, regs}
+        {:ok, out_regs}
       end
     end
   end
@@ -84,8 +84,8 @@ defmodule TypeTest.Abstract.ComptimeTest do
         IO.puts(a)
         {:ok, regs}
       end
-      backprop(regs, _meta, ...) do
-        {:ok, regs}
+      backprop(out_regs, _in_regs, _meta, ...) do
+        {:ok, out_regs}
       end
     end
   end
@@ -108,8 +108,8 @@ defmodule TypeTest.Abstract.ComptimeTest do
         IO.puts(a)
         {:ok, regs}
       end
-      backprop(regs = %{foo: a}, _meta, ...) do
-        {:ok, regs}
+      backprop(out_regs = %{foo: a}, _in_regs, _meta, ...) do
+        {:ok, out_regs}
       end
     end
   end
@@ -131,8 +131,8 @@ defmodule TypeTest.Abstract.ComptimeTest do
       forward(regs, _meta, ...) do
         {:ok, regs}
       end
-      backprop(regs, _meta, ...) do
-        {:ok, regs}
+      backprop(out_regs, _in_regs, _meta, ...) do
+        {:ok, out_regs}
       end
     end
   end
@@ -154,8 +154,8 @@ defmodule TypeTest.Abstract.ComptimeTest do
       forward(regs, _meta, ...) when is_defined(regs, a) do
         {:ok, regs}
       end
-      backprop(regs, _meta, ...) do
-        {:ok, regs}
+      backprop(out_regs, _in_regs, _meta, ...) do
+        {:ok, out_regs}
       end
     end
   end
@@ -177,8 +177,8 @@ defmodule TypeTest.Abstract.ComptimeTest do
       forward(regs, _meta, ...) do
         {:ok, regs}
       end
-      backprop(regs, _meta, ...) when is_defined(regs, a) do
-        {:ok, regs}
+      backprop(out_regs, _in_regs, _meta, ...) when is_defined(out_regs, a) do
+        {:ok, out_regs}
       end
     end
   end
@@ -200,8 +200,8 @@ defmodule TypeTest.Abstract.ComptimeTest do
       forward(regs, _meta, ...) do
         {:ok, regs}
       end
-      backprop(regs, _meta, ...) do
-        {:ok, regs}
+      backprop(out_regs, _in_regs, _meta, ...) do
+        {:ok, out_regs}
       end
     end
   end
@@ -230,9 +230,9 @@ defmodule TypeTest.Abstract.ComptimeTest do
 
       forward(regs, _meta, ...) do
         cond do
-          match?(%Type.List{nonempty: true}, fetch_type(regs, from)) ->
+          match?(%Type.List{nonempty: true}, get_reg(regs, from)) ->
             {:ok, put_reg(regs, to, builtin(:pos_integer))}
-          match?(%Type.List{}, fetch_type(regs, from)) ->
+          match?(%Type.List{}, get_reg(regs, from)) ->
             {:ok, put_reg(regs, to, builtin(:non_neg_integer))}
         end
       end

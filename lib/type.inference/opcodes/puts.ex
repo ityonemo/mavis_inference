@@ -12,18 +12,18 @@ defmodule Type.Inference.Opcodes.Puts do
 
     forward(regs, _meta, ...) do
       cond do
-        match?(%Type.List{}, fetch_type(regs, tail)) ->
-          tail_type = fetch_type(regs, tail)
+        match?(%Type.List{}, get_reg(regs, tail)) ->
+          tail_type = get_reg(regs, tail)
           {:ok, put_reg(regs, to,
             %{tail_type |
-              type: Type.union(fetch_type(regs, head), tail_type.type),
+              type: Type.union(get_reg(regs, head), tail_type.type),
               nonempty: true})}
 
         true ->
           {:ok, put_reg(regs, to,
-            %Type.List{type: fetch_type(regs, head),
+            %Type.List{type: get_reg(regs, head),
                        nonempty: true,
-                       final: fetch_type(regs, tail)})}
+                       final: get_reg(regs, tail)})}
       end
     end
 
@@ -39,7 +39,7 @@ defmodule Type.Inference.Opcodes.Puts do
           _ -> :ok
         end)
 
-        tuple = %Type.Tuple{elements: Enum.map(list, &fetch_type(regs, &1))}
+        tuple = %Type.Tuple{elements: Enum.map(list, &get_reg(regs, &1))}
         {:ok, put_reg(regs, dest, tuple)}
       catch
         res ->

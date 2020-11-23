@@ -48,6 +48,34 @@ defmodule Type.Inference.Block do
     {:error, "invalid typespec"}
   end
 
+  alias Type.Inference.Registers
+  @spec eval(t, Registers.t) :: Type.t
+  @doc """
+  evaluates a block set given a set of registers
+  """
+  def eval(block, regs) do
+    Enum.map(block, fn block_seg ->
+      if satisfied_by?(block_seg, regs) do
+        block_seg.makes
+      else
+        builtin(:none)
+      end
+    end)
+    |> Enum.reject(&(&1 == builtin(:none)))
+    |> Type.union
+  end
+
+  defp satisfied_by?(segment, %{x: x_regs}) do
+    Enum.all?(segment.needs, fn
+      {reg, _} when not is_map_key(x_regs, reg) -> false
+      {reg, seg_type} ->
+        case Type.usable_as(x_regs[reg], seg_type) do
+          {:error, _} -> false
+          _ -> true
+        end
+    end)
+  end
+
   defp get_params(%{needs: needs}) when needs == %{}, do: []
   defp get_params(block) do
     max_key = block.needs

@@ -3,7 +3,7 @@ defmodule Type.Inference.Opcodes.Gets do
 
   opcode {:get_tuple_element, from, index, to} do
     forward(regs, _meta, ...) do
-      case fetch_type(regs, from) do
+      case get_reg(regs, from) do
         %Type.Tuple{elements: els} when length(els) > index ->
           {:ok, put_reg(regs, to, Enum.at(els, index))}
         _ ->
@@ -20,7 +20,7 @@ defmodule Type.Inference.Opcodes.Gets do
     end
 
     forward(regs, _meta, ...) do
-      from_type = fetch_type(regs, from)
+      from_type = get_reg(regs, from)
 
       new_state = regs
       |> put_reg(head, from_type.type)
@@ -29,7 +29,9 @@ defmodule Type.Inference.Opcodes.Gets do
       {:ok, new_state}
     end
 
-    backprop :terminal
+    backprop(out_regs, in_regs, _meta, ...) do
+
+    end
   end
 
   opcode {:get_tl, from, to} do
@@ -38,7 +40,7 @@ defmodule Type.Inference.Opcodes.Gets do
     end
 
     forward(regs, _meta, ...) do
-      from_type = fetch_type(regs, from)
+      from_type = get_reg(regs, from)
 
       {:ok, put_reg(regs, to, Type.union(from_type, from_type.final))}
     end

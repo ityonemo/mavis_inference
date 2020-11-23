@@ -11,14 +11,14 @@ defmodule Type.Inference.Opcodes.Terminal do
       select_table = list
       |> Enum.chunk_every(2)
       |> Enum.map(fn [param, jump] ->
-        {fetch_type(regs, param), evaluate_jump(jump)}
+        {get_reg(regs, param), evaluate_jump(jump)}
       end)
       |> Enum.into(%{})
 
       if meta.module == nil, do: raise "#{inspect meta} #{inspect regs}"
 
       if is_defined(regs, from) do
-        jump_reg = fetch_type(regs, from)
+        jump_reg = get_reg(regs, from)
 
         result_type = BlockCache.depend_on({meta.module, select_table[jump_reg]})
         |> Enum.map(&(&1.makes))

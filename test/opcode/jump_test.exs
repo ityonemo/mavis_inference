@@ -27,7 +27,7 @@ defmodule TypeTest.Opcode.JumpTest do
       |> Parser.new(module: __MODULE__)
       |> fast_forward
 
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "backpropagates the needs types of the jump target" do

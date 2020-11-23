@@ -47,7 +47,7 @@ defmodule TypeTest.Opcode.GetsTest do
                     2 => %Type.List{type: builtin(:any), nonempty: false}}} = [@op_get_lst]
       |> Parser.new(preload: %{0 => @lst})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "propagates list type correctly" do
@@ -55,7 +55,7 @@ defmodule TypeTest.Opcode.GetsTest do
                     2 => %Type.List{type: builtin(:atom), nonempty: false}}} = [@op_get_lst]
       |> Parser.new(preload: %{0 => %{@lst | type: builtin(:atom)}})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "propagates final correctly" do
@@ -65,7 +65,7 @@ defmodule TypeTest.Opcode.GetsTest do
                     2 => ^union_type}} = [@op_get_lst]
       |> Parser.new(preload: %{0 => %{@lst | final: builtin(:atom)}})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "backpropagates with nonempty any list" do
@@ -75,7 +75,7 @@ defmodule TypeTest.Opcode.GetsTest do
 
       # note that register 2 winds up as "builtin(:any)" because the "final" term could be anything.
       assert %{0 => %Type.List{nonempty: true, final: builtin(:any)}} = history_start(state).x
-      assert %{1 => builtin(:any), 2 => builtin(:any)} = history_finish(state).x
+      assert %{1 => builtin(:any), 2 => builtin(:any)} = history_final(state).x
     end
 
     test "fails when the tuple element isn't there"
@@ -91,14 +91,14 @@ defmodule TypeTest.Opcode.GetsTest do
       assert %{x: %{1 => %Type.List{type: builtin(:any), nonempty: false}}} = [@op_get_tl]
       |> Parser.new(preload: %{0 => @lst})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "propagates list type correctly" do
       assert %{x: %{1 => %Type.List{type: builtin(:atom), nonempty: false}}} = [@op_get_tl]
       |> Parser.new(preload: %{0 => %{@lst | type: builtin(:atom)}})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "propagates final correctly" do
@@ -107,7 +107,7 @@ defmodule TypeTest.Opcode.GetsTest do
       assert %{x: %{1 => ^union_type}} = [@op_get_tl]
       |> Parser.new(preload: %{0 => %{@lst | final: builtin(:atom)}})
       |> Parser.do_forward
-      |> history_finish
+      |> history_final
     end
 
     test "backpropagates with nonempty any list" do
@@ -117,7 +117,7 @@ defmodule TypeTest.Opcode.GetsTest do
 
       # note that register 2 winds up as "builtin(:any)" because the "final" term could be anything.
       assert %{0 => %Type.List{nonempty: true, final: builtin(:any)}} = history_start(state).x
-      assert %{1 => builtin(:any)} = history_finish(state).x
+      assert %{1 => builtin(:any)} = history_final(state).x
     end
 
     test "fails when the tuple element isn't there"

@@ -22,6 +22,15 @@ defmodule TypeTest.Opcode.TestsTest do
       needs: %{0 => builtin(:integer)},
       makes: builtin(:float)
     }])
+
+    # also preseed a value that can have multiple choices
+    BlockCache.preseed({__MODULE__, 99}, [%Block{
+      needs: %{0 => builtin(:integer)},
+      makes: builtin(:float)
+    }, %Block{
+      needs: %{0 => builtin(:atom)},
+      makes: :foo
+    }])
     :ok
   end
 
@@ -44,7 +53,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
 
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type on pos_integer" do
@@ -52,7 +61,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => builtin(:pos_integer)}, module: __MODULE__)
       |> fast_forward
 
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type on neg_integer" do
@@ -60,7 +69,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => builtin(:neg_integer)}, module: __MODULE__)
       |> fast_forward
 
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type on non_neg_integer" do
@@ -68,7 +77,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => builtin(:non_neg_integer)}, module: __MODULE__)
       |> fast_forward
 
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type on literal integer" do
@@ -76,7 +85,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => 47}, module: __MODULE__)
       |> fast_forward
 
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -85,7 +94,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:atom)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -100,10 +109,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:atom)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -120,7 +129,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => nil}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -129,7 +138,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -138,7 +147,7 @@ defmodule TypeTest.Opcode.TestsTest do
 
     test "forwards when the jump has multiple conditions"
 
-    test "backpropagates when there's nothing in the test register" do
+    test "triggers backprop when there's nothing in the test register" do
       state = @op_is_nil_all
       |> Parser.new(module: __MODULE__)
       |> fast_forward
@@ -146,11 +155,21 @@ defmodule TypeTest.Opcode.TestsTest do
       assert %Registers{x: %{0 => nil}} = history_start(state, 0)
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
 
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
+
+    @op_is_nil_bifurc {:test, :is_nil, {:f, 99}, [x: 0]}
+    test "performs a backpropagation" do
+      state = [@op_is_nil_bifurc]
+      |> Parser.new(module: __MODULE__)
+      |> Parser.do_forward |> IO.inspect(label: "168")
+      |> change_final(0, :foo)
+      |> change_final(1, :foo)
+      |> IO.inspect(label: "159")
+    end
   end
 
   describe "is_boolean opcode" do
@@ -163,7 +182,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => true}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type on false" do
@@ -172,7 +191,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => false}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type on boolean" do
@@ -181,7 +200,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:boolean)}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -190,7 +209,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -205,10 +224,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:boolean)}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -224,7 +243,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => :quux}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type on builtin atom" do
@@ -233,7 +252,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:atom)}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -242,7 +261,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -257,10 +276,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:atom)}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -276,7 +295,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => %Type.Tuple{elements: {:min, 0}}}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type on an a defined tuple" do
@@ -285,7 +304,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => %Type.Tuple{elements: [builtin(:any)]}}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -294,7 +313,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -309,10 +328,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => %Type.Tuple{elements: {:min, 0}}}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -327,7 +346,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> Parser.new(preload: %{0 => %Type.Tuple{elements: [:tag, builtin(:any)]}}, module: __MODULE__)
       |> fast_forward
 
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -336,7 +355,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -351,10 +370,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => %Type.Tuple{elements: [:tag, builtin(:any)]}}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -368,14 +387,14 @@ defmodule TypeTest.Opcode.TestsTest do
       assert %{x: %{0 => :foo}} = @op_is_port_all
       |> Parser.new(preload: %{0 => builtin(:port)}, module: __MODULE__)
       |> fast_forward()
-      |> history_finish
+      |> history_final
     end
 
     test "forward propagates the type that matches the jump condition" do
       assert %{x: %{0 => builtin(:float)}} = @op_is_port_all
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
-      |> history_finish
+      |> history_final
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -390,10 +409,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %{x: %{0 => builtin(:port)}} = history_start(state, 0)
-      assert %{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -408,14 +427,14 @@ defmodule TypeTest.Opcode.TestsTest do
       assert %{x: %{0 => :foo}} = @op_is_ref_all
       |> Parser.new(preload: %{0 => builtin(:reference)}, module: __MODULE__)
       |> fast_forward()
-      |> history_finish
+      |> history_final
     end
 
     test "forward propagates the type that matches the jump condition" do
       assert %{x: %{0 => builtin(:float)}} = @op_is_ref_all
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
-      |> history_finish
+      |> history_final
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -430,10 +449,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %{x: %{0 => builtin(:reference)}} = history_start(state, 0)
-      assert %{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -451,7 +470,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => @any_list}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type on a list with any final" do
@@ -460,7 +479,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => %Type.List{type: builtin(:any), final: builtin(:any)}}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -469,7 +488,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -485,10 +504,10 @@ defmodule TypeTest.Opcode.TestsTest do
 
       assert %Registers{x: %{0 => %Type.List{type: builtin(:any), final: builtin(:any)}}}
         = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -503,14 +522,14 @@ defmodule TypeTest.Opcode.TestsTest do
       assert %{x: %{0 => :foo}} = @op_is_bin_all
       |> Parser.new(preload: %{0 => @binary}, module: __MODULE__)
       |> fast_forward()
-      |> history_finish
+      |> history_final
     end
 
     test "forward propagates the type that matches the jump condition" do
       assert %{x: %{0 => builtin(:float)}} = @op_is_bin_all
       |> Parser.new(preload: %{0 => builtin(:integer)}, module: __MODULE__)
       |> fast_forward
-      |> history_finish
+      |> history_final
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -525,10 +544,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %{x: %{0 => @binary}} = history_start(state, 0)
-      assert %{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -546,7 +565,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => @function_1}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -555,7 +574,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -570,10 +589,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => %Type.Function{params: :any, return: builtin(:any)}}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -589,7 +608,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => @function_1}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -598,7 +617,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -613,10 +632,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => %Type.Function{params: [builtin(:any)], return: builtin(:any)}}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -639,7 +658,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => @any_map}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "forward propagates the type that matches the jump condition" do
@@ -648,7 +667,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -663,10 +682,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => @any_map}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "passes needs through a backpropagation"
@@ -684,10 +703,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:integer)}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "forward propagates only the success type when it's a matching singleton type" do
@@ -696,7 +715,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => :bar, 1 => :bar}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
       assert length(state.histories) == 1
     end
 
@@ -706,7 +725,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => 1, 1 => 2}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
       assert length(state.histories) == 1
     end
 
@@ -716,7 +735,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:float)}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -747,10 +766,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:pid)}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:pid)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "what happens when the forward propagation is overbroad"
@@ -781,10 +800,10 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:integer)}} = history_start(state, 0)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state, 0)
+      assert %Registers{x: %{0 => :foo}} = history_final(state, 0)
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:integer)}} = history_start(state, 1)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state, 1)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state, 1)
     end
 
     test "forward propagates only the fail type when it's a matching singleton type" do
@@ -793,7 +812,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => 1, 1 => 1}} = history_start(state)
-      assert %Registers{x: %{0 => builtin(:float)}} = history_finish(state)
+      assert %Registers{x: %{0 => builtin(:float)}} = history_final(state)
       assert length(state.histories) == 1
     end
 
@@ -805,7 +824,7 @@ defmodule TypeTest.Opcode.TestsTest do
       |> fast_forward
 
       assert %Registers{x: %{0 => builtin(:integer), 1 => builtin(:atom)}} = history_start(state)
-      assert %Registers{x: %{0 => :foo}} = history_finish(state)
+      assert %Registers{x: %{0 => :foo}} = history_final(state)
     end
 
     test "what happens when the forward propagation is overbroad"
